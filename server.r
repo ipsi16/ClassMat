@@ -20,6 +20,8 @@ function(input, output, session) {
   #get data from getdata function  
   data.df <- getdata()
   
+  version1 <- 1
+  
   #reactive variables v: n.col = numer of classes, counter, selected
   v <<- reactiveValues(version = 1, n.col = nrow(unique(data.df["label"])), selected = list(), focusedPlotCoords = c(1,1))
   
@@ -31,9 +33,12 @@ function(input, output, session) {
   #for loading screen
   loading <- reactiveValues(flag = 0)
   
+  print(paste("Version", version))
+  
   # initially get data and plot lists
   p <- getplotlist( 1, data.df , NULL , NULL)
   diag <- getdiaglist(1, data.df)
+  p2 <- getplotlist2( 1, data.df , NULL , NULL)
   palete <- bigplot(data.df)
   uniq_labels <- unique(data.df[,ncol(data.df)])
   comblabels <- combn(uniq_labels,2)
@@ -60,19 +65,57 @@ function(input, output, session) {
       })
     })
   }
+  
+  for(i in 1:version1)
+  {
+    local({
+      snapshotName <- sprintf("snapshot%d",i)
+      print(paste("Assign ",snapshotName))
+      output[[snapshotName]] <<- renderImage({
+      
+      n <- length(uniq_labels)
+      noLowerTriangle <- (n^2-n)/2
+      k <-  1:noLowerTriangle
+      orderMatrix <- matrix(nrow = n, ncol = n)
+      orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
+      print("Order Matrix")
+      print(orderMatrix)
+      print(p2)
+      #generate snapshot and store as file
+      outfile <- sprintf("version%d.jpg",i)
+      print(outfile)
+      
+      
+      #jpeg(outfile,width=400, height=400)
+      g <- arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
+      ggsave(sprintf("version%d.jpg",i),g)
+      
+      #dev.off()
+      
+      #render snapshot on timeline
+      list(src = outfile, contentType = 'image/jpg', width = 150, height = 150, alt = "This is alternate text")
+      #ggsave(sprintf("version%d.jpg",v$version),g1)
+      #filename = sprintf("version%d.jpg",v$version)
+      #list(src = filename,alt = paste("Image number", v$version))
+      #g
+    }, deleteFile = FALSE)
+    })
+  }
   #reactive({
   #output[["palette"]] <<- renderPlotly({
    # palete
     #}) 
   #})
+
   
-  
-  observeEvent(df$Df,{
-   
+  observeEvent(v$version,{
+    
     p <<- getplotlist( 1, df$Df , NULL , NULL)
     diag <<- getdiaglist(1, df$Df)
     uniq_labels <<- sort(unique(df$Df[,ncol(df$Df)]))
     comblabels <<- combn(uniq_labels,2)
+    #print(paste("Inc version",v$version))
+    #v$version <<- v$version + 1
     # Assign output names for created plots
     for (i in 1:length(p)) {
       local({
@@ -94,9 +137,48 @@ function(input, output, session) {
       })
     }
     
+    if(v$version>1)
+    {
+      for(i in 1:v$version)
+      {
+          print(paste("i=",i))
+          snapshotName <- sprintf("snapshot%d",i)
+          output[[snapshotName]] <- renderImage({
+            
+          outfile <<- sprintf("version%d.jpg",i)
+          print(outfile)
+          
+          #generate snapshot and store as file
+          if(i== v$version)
+          {
+            p2 <- getplotlist2( 1, df$Df , NULL , NULL)
+            n <- length(uniq_labels)
+            noLowerTriangle <- (n^2-n)/2
+            k <-  1:noLowerTriangle
+            orderMatrix <- matrix(nrow = n, ncol = n)
+            orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
+            print(orderMatrix)
+            
+            #png(outfile)
+            #arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
+            #dev.off()
+            g <- arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
+            ggsave(sprintf("version%d.jpg",i),g)
+          }
+          #render snapshot on timeline
+          list(src = outfile,
+               contentType = 'image/jpg',
+               width = 150,
+               height = 150,
+               alt = "This is alternate text")
+          #ggsave(sprintf("version%d.jpg",v$version),g1)
+          #filename = sprintf("version%d.jpg",v$version)
+          #list(src = filename,alt = paste("Image number", v$version))
+        }, deleteFile = FALSE)
+      }
+    }
+    #output$snapshot <- renderPlot({g1})
   })
-  
-  
   
   
   
@@ -105,15 +187,11 @@ function(input, output, session) {
   observeEvent(input$merge,
                { 
                  print('===================================')
-                 print(df$labels)
                  label1 <- v$focusedPlotCoords[1] 
                  label2 <- v$focusedPlotCoords[2]
                  
                  
                   loading$flag <- 0
-                  print(v$version)
-                  print(df$Df)
-                  print(df$labels)
                   old_col <- ifelse( v$version == 1, "label", paste("label", v$version, sep=""))
                   new_col <- paste("label", v$version + 1  , sep="")
                   df$labels[new_col] <<-  ifelse((df$labels[[old_col]] == max(v$focusedPlotCoords)) , 
@@ -122,6 +200,7 @@ function(input, output, session) {
                
                df$Df['label'] <- df$labels[, ncol(df$labels)]
                
+               print("After manipulation")
                print(df$Df)
                
                #update using df$Df
@@ -189,6 +268,11 @@ function(input, output, session) {
                      #print(levels(df$Df$label))
                      
                      df$Df[(presenceRoster$x & presenceRoster$y),]$label <- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
+                     old_col <- ifelse( v$version == 1, "label", paste("label", v$version, sep=""))
+                     new_col <- paste("label", v$version + 1  , sep="")
+                     df$labels[new_col] <<- df$Df$label 
+                     v$version <<- v$version + 1
+                     
                      print("Altered Data points")
                      print(df$Df)
                    }
@@ -235,7 +319,15 @@ function(input, output, session) {
                }
   )
   
- 
+  output$timeline <- renderUI({
+    print(paste("VERSION",v$version))
+    lis <<- lapply(1:v$version,function(i){  tags$li(div(class="timeline-item",plotOutput(sprintf("snapshot%d",i),height=150,width=150)))       })
+    print(lis)
+    tags$ul(class="timeline-list",
+      lis
+    )
+  })
+  
   
   #Printing in grid
   output$plots <- renderUI({
@@ -243,18 +335,16 @@ function(input, output, session) {
     n <- length(unique(df$Df[,c('label')]))   #number of classes/catgeories
     loading$flag <- 0
     col.width <- round(12/n) # Calculate bootstrap column width
-    print(paste("n=",n,";width",col.width,sep=""))
     cnter <- 0 # Counter variable ------ counter for what?
     
     
     #assigning order of printing plots in triangle
     noLowerTriangle <- (n^2-n)/2
     k <-  1:noLowerTriangle
-    orderMatrix <- matrix(nrow = n, ncol = n)
+    orderMatrix <<- matrix(nrow = n, ncol = n)
     orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
     print(orderMatrix)
     print(uniq_labels)
-    print(comblabels)
     order <- c(t(orderMatrix))
     order <- order[!is.na(order)]
     print(order)
@@ -277,7 +367,6 @@ function(input, output, session) {
         lda_cols <- lapply(1:(row_num-1), function(col_num){
           
           plotname <- paste("plot", order[g], sep="")
-          print(paste("PLOT ",plotname,"row and col:",row_num,",",col_num, sep=" "))
           g <<- g+1
           column(col.width, plotlyOutput(plotname, height = "100%", width = "100%"))
         })
@@ -325,7 +414,6 @@ function(input, output, session) {
     diagEventListener <- function(j) {
       function()
       {
-        print(paste("Mouse Enter Lsitener"," diag ",j))
         onevent("mouseenter",paste("diag",j,sep=""),v$focusedPlotCoords <- c(j, j))
       }
     }
@@ -342,7 +430,6 @@ function(input, output, session) {
     }
     
     d<- div(style="height:200;width:200;position:absolute;right:0;top:0;background:red;z-index:2;","Hole in wall")#plotlyOutput("palette",height = 200,width=200))
-    print("---------------------Render ends---------------")
     
     # change screen from loading
     loading$flag <- 1
@@ -352,20 +439,18 @@ function(input, output, session) {
     r <- do.call(tagList, rows)
     div(r,d)
   })
+ 
   
   
-  #output$palette <- 
   
   output$selectedPlot <- renderPlotly(
   {
     
     t<-p[[1]]
-    print(paste("Length of p : ",length(p)))
     if(length(v$focusedPlotCoords)!=0)
     {
       label1 = v$focusedPlotCoords[1]
       label2 =  v$focusedPlotCoords[2]
-      print(paste(label1,label2,sep=" "))
       
       if(label1 == label2)
       {
@@ -376,8 +461,6 @@ function(input, output, session) {
         uniq_labels <- order(unique(df$Df[,ncol(df$Df)]))
         comb_labels <- combn(uniq_labels,2)
         n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
-        print(paste("n=",n))
-        print(length(p))
         t <- p[[n]]
       }
     }

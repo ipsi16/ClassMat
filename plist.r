@@ -39,6 +39,37 @@ getplotlist <- function(counter, data.df, brushedlines, clickedline)
   return(p)
 }
 
+getplotlist2 <- function(counter, data.df, brushedlines, clickedline)
+{
+  uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
+  comb_labels <- combn(uniq_labels,2)
+  
+  # Set palette:
+  # NAME; No.OF COLORS
+  # Accent 8
+  # Dark2 8
+  # RColorBrewer 3
+  # Paired 12
+  # Pastel1 9
+  # Pastel2 8
+  # Set1 9
+  # Set2 8
+  # Set3 12
+  
+  coloursvec <- brewer.pal(8, "Dark2")
+  palette(coloursvec)
+  
+  # Replace doPlot with function that returns plots given 2 labels
+  p <- lapply(1:ncol(comb_labels), function(i)
+  {
+    l1 <- comb_labels[1,i]
+    l2 <- comb_labels[2,i]
+    doPlot2(counter, data.df, comb_labels[1, i], comb_labels[2, i],  brushedlines, clickedline, coloursvec)
+  })
+  
+  return(p)
+}
+
 
 # Returns diagonal list of plots
 # Replace doPlot with LDA generating function

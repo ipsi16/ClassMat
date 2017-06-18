@@ -26,6 +26,12 @@ fluidPage(
     tags$link(rel="stylesheet",type="text/css",href="style.css")
   ),
   
+  tags$nav(class='navbar navbar-inverse',
+           tags$a(class="navbar-brand","ClassMat")),
+  
+  fluidRow(
+    uiOutput(class='timeline bg-faded','timeline')
+  ),
   
   #body
   fluidRow(

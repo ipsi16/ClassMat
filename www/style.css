@@ -7,3 +7,19 @@
   height:100%;
   padding:0;
 }
+.timeline
+{
+  height:auto;
+  background-color:black;
+}
+.timeline-list
+{
+  list-style:none;
+  display:flex;
+  flex-direction: row;
+}
+.timeline-list li
+{
+  float: left;
+  margin: 10px 15px;
+}
