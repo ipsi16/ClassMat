@@ -33,6 +33,8 @@ function(input, output, session) {
   #for loading screen
   loading <- reactiveValues(flag = 0)
   
+  #outputOptions(output, "timeline", priority = 1)
+  
   print(paste("Version", version))
   
   # initially get data and plot lists
@@ -319,9 +321,39 @@ function(input, output, session) {
                }
   )
   
+  onTimelineItemClickListener <- function(i)
+  {
+    function()
+    {
+      onclick(sprintf("snapshot%d",i),function(e){ 
+        
+        #reset labels to one in the version 
+        #df$Df$labels <<- df$label[sprintf("label%d",i)]
+        #v$version <<- i 
+        #TODO: reset labels to selected version
+        #workout a way that any split/merge operation must produce ith version where ith version is max_count(label columns)+1 and not selected_version+1
+        
+        })
+    }
+  }
+  
   output$timeline <- renderUI({
     print(paste("VERSION",v$version))
     lis <<- lapply(1:v$version,function(i){  tags$li(div(class="timeline-item",plotOutput(sprintf("snapshot%d",i),height=150,width=150)))       })
+    
+    timelineItemClickListeners <<-  lapply(1:v$version,function(i){
+      force(i)
+      print(str(onTimelineItemClickListener(i)))
+      onTimelineItemClickListener(i)
+    }) 
+    for(i in 1:length(timelineItemClickListeners))
+    {
+      print(i)
+      print(str(timelineItemClickListeners[[i]]))
+      timelineItemClickListeners[[i]]()
+    }
+      
+    
     print(lis)
     tags$ul(class="timeline-list",
       lis
@@ -429,7 +461,7 @@ function(input, output, session) {
       diagEventListeners[[j]]()
     }
     
-    d<- div(style="height:200;width:200;position:absolute;right:0;top:0;background:red;z-index:2;","Hole in wall")#plotlyOutput("palette",height = 200,width=200))
+    #d<- div(style="height:200;width:200;position:absolute;right:0;top:0;background:red;z-index:2;","Hole in wall")#plotlyOutput("palette",height = 200,width=200))
     
     # change screen from loading
     loading$flag <- 1
@@ -437,7 +469,8 @@ function(input, output, session) {
     # Calling the rows that contain cols
     
     r <- do.call(tagList, rows)
-    div(r,d)
+    #div(r,d)
+    r
   })
  
   
@@ -472,11 +505,11 @@ function(input, output, session) {
     t
   })
   
-  output$selected <- renderPrint({
-    d <- event_data("plotly_selected",source = "focusedPlot")
-    if (is.null(d)) "Click and drag events (i.e., select/lasso) appear here (double-click to clear)" else d[, c("x","y")]
+  #output$selected <- renderPrint({
+    #d <- event_data("plotly_selected",source = "focusedPlot")
+    #if (is.null(d)) "Click and drag events (i.e., select/lasso) appear here (double-click to clear)" else d[, c("x","y")]
     
-  })
+  #})
   
   # To display loading page
   observe({
