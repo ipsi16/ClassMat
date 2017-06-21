@@ -41,7 +41,8 @@ getplotlist <- function(counter, data.df, brushedlines, clickedline)
 
 getplotlist2 <- function(counter, data.df, brushedlines, clickedline)
 {
-  uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
+  print(data.df)
+  uniq_labels <- sort(unique(data.df[,c('label')]))
   comb_labels <- combn(uniq_labels,2)
   
   # Set palette:

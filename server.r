@@ -23,7 +23,7 @@ function(input, output, session) {
   version1 <- 1
   
   #reactive variables v: n.col = numer of classes, counter, selected
-  v <<- reactiveValues(version = 1, n.col = nrow(unique(data.df["label"])), selected = list(), focusedPlotCoords = c(1,1))
+  v <<- reactiveValues(version = 1, max_version=1, n.col = nrow(unique(data.df["label"])), selected = list(), focusedPlotCoords = c(1,1))
   
   #reactive values for df: df, labels, sel
   df <- reactiveValues(Df = data.df, labels = getdata(), sel= list())
@@ -34,8 +34,6 @@ function(input, output, session) {
   loading <- reactiveValues(flag = 0)
   
   #outputOptions(output, "timeline", priority = 1)
-  
-  print(paste("Version", version))
   
   # initially get data and plot lists
   p <- getplotlist( 1, data.df , NULL , NULL)
@@ -82,7 +80,6 @@ function(input, output, session) {
       orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
       print("Order Matrix")
       print(orderMatrix)
-      print(p2)
       #generate snapshot and store as file
       outfile <- sprintf("version%d.jpg",i)
       print(outfile)
@@ -139,20 +136,24 @@ function(input, output, session) {
       })
     }
     
-    if(v$version>1)
+    if(v$version>1 & v$version==v$max_version)
     {
-      for(i in 1:v$version)
-      {
-          print(paste("i=",i))
+      #for(i in 1:v$version)
+      #{
+      #print()
+          i <- v$version
           snapshotName <- sprintf("snapshot%d",i)
           output[[snapshotName]] <- renderImage({
-            
+           
+          force(i)
+          print(paste("i=",i))   
           outfile <<- sprintf("version%d.jpg",i)
-          print(outfile)
+          
           
           #generate snapshot and store as file
           if(i== v$version)
           {
+            print(outfile)
             p2 <- getplotlist2( 1, df$Df , NULL , NULL)
             n <- length(uniq_labels)
             noLowerTriangle <- (n^2-n)/2
@@ -177,7 +178,7 @@ function(input, output, session) {
           #filename = sprintf("version%d.jpg",v$version)
           #list(src = filename,alt = paste("Image number", v$version))
         }, deleteFile = FALSE)
-      }
+      #}
     }
     #output$snapshot <- renderPlot({g1})
   })
@@ -194,11 +195,19 @@ function(input, output, session) {
                  
                  
                   loading$flag <- 0
-                  old_col <- ifelse( v$version == 1, "label", paste("label", v$version, sep=""))
-                  new_col <- paste("label", v$version + 1  , sep="")
+                  if(v$max_version==1)
+                  {
+                    df$labels['label1'] <- df$Df[,c('label')]
+                     
+                  }
+                  print(df$labels['label1'])
+                    
+                  old_col <- paste("label", v$max_version, sep="")
+                  new_col <- paste("label", v$max_version + 1  , sep="")
                   df$labels[new_col] <<-  ifelse((df$labels[[old_col]] == max(v$focusedPlotCoords)) , 
                                               min(v$focusedPlotCoords), df$labels[[old_col]])
-                  v$version <<- v$version + 1
+                  v$max_version <<- v$max_version + 1
+                  v$version <<- v$max_version
                
                df$Df['label'] <- df$labels[, ncol(df$labels)]
                
@@ -270,10 +279,13 @@ function(input, output, session) {
                      #print(levels(df$Df$label))
                      
                      df$Df[(presenceRoster$x & presenceRoster$y),]$label <- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
-                     old_col <- ifelse( v$version == 1, "label", paste("label", v$version, sep=""))
-                     new_col <- paste("label", v$version + 1  , sep="")
+                     if(v$max_version==1)
+                       df$labels['label1'] <- df$Df[,c('label')]
+                     old_col <- paste("label", v$max_version, sep="")
+                     new_col <- paste("label", v$max_version + 1  , sep="")
                      df$labels[new_col] <<- df$Df$label 
-                     v$version <<- v$version + 1
+                     v$max_version <<- v$max_version + 1
+                     v$version <<- v$max_version
                      
                      print("Altered Data points")
                      print(df$Df)
@@ -325,10 +337,14 @@ function(input, output, session) {
   {
     function()
     {
-      onclick(sprintf("snapshot%d",i),function(e){ 
+        onclick(sprintf("snapshot%d",i),function(e){ 
         
+        print(sprintf("label%d",i))
+        df$Df[,c("label")] <<- df$labels[sprintf("label%d",i)]
+        print(df$Df$label)
+        v$version <<- i
         #reset labels to one in the version 
-        #df$Df$labels <<- df$label[sprintf("label%d",i)]
+        #
         #v$version <<- i 
         #TODO: reset labels to selected version
         #workout a way that any split/merge operation must produce ith version where ith version is max_count(label columns)+1 and not selected_version+1
@@ -338,23 +354,20 @@ function(input, output, session) {
   }
   
   output$timeline <- renderUI({
-    print(paste("VERSION",v$version))
-    lis <<- lapply(1:v$version,function(i){  tags$li(div(class="timeline-item",plotOutput(sprintf("snapshot%d",i),height=150,width=150)))       })
     
-    timelineItemClickListeners <<-  lapply(1:v$version,function(i){
+      lis <<- lapply(1:v$max_version,function(i){  
+        tags$li(div(class="timeline-item",plotOutput(sprintf("snapshot%d",i),height=150,width=150)))       
+        })
+    
+      timelineItemClickListeners <<-  lapply(1:v$max_version,function(i){
       force(i)
-      print(str(onTimelineItemClickListener(i)))
       onTimelineItemClickListener(i)
     }) 
     for(i in 1:length(timelineItemClickListeners))
     {
-      print(i)
-      print(str(timelineItemClickListeners[[i]]))
       timelineItemClickListeners[[i]]()
     }
       
-    
-    print(lis)
     tags$ul(class="timeline-list",
       lis
     )
