@@ -3,7 +3,6 @@ library(lazyeval)
 library(plotly)
 
 
-data.df <- getdata()
 
 # big plot for selection
 bigplot = function(data.df){
@@ -17,21 +16,22 @@ bigplot = function(data.df){
   
 
 # doplot function to generate scatterplots
-doPlot = function(counter, data.df, label1, label2, brushedlines, clickedline, coloursvec){
+doPlotly = function(counter, data.df, label1, label2, brushedlines, clickedline, coloursvec){
 
   
   selected_classes <- c(label1 , label2)
   
-  formatCol <- names(data.df)[ncol(data.df)]
+  formatCol <- 'label'
   formula <- interp(~ifelse(label %in% selected_classes , ifelse( label == selected_classes[1] , "b", "c"), "a"), label = as.name(formatCol))
   plot.df <- data.df %>% mutate_(formatCol = formula)
- 
+  #print(plot.df)
   #print(plot.df %>% arrange(formatCol))
   
   
   
-  if(!(label1 == label2)){
-  g <- ggplot(plot.df  %>%
+  if(!(label1 == label2))
+  {
+    g <- ggplot(plot.df  %>%
                 arrange(formatCol) , aes(x= x, y= y)) + theme_bw() +
     geom_point(aes(color = formatCol),size=0.5) + 
     scale_colour_manual(values= c("b" = coloursvec[as.integer(label1)], "c" = coloursvec[as.integer(label2)], "a" = "#E4E4E4")) +
@@ -85,19 +85,16 @@ doPlot = function(counter, data.df, label1, label2, brushedlines, clickedline, c
   return(p)
 }
 
-doPlot2 = function(counter, data.df, label1, label2, brushedlines, clickedline, coloursvec){
+doPlot = function(counter, data.df, label1, label2, brushedlines, clickedline, coloursvec){
   
   
   selected_classes <- c(label1 , label2)
   
-  formatCol <- names(data.df)[ncol(data.df)]
+  formatCol <- 'label'
   formula <- interp(~ifelse(label %in% selected_classes , ifelse( label == selected_classes[1] , "b", "c"), "a"), label = as.name(formatCol))
   plot.df <- data.df %>% mutate_(formatCol = formula)
-  
-  #print(plot.df %>% arrange(formatCol))
-  
-  
-  
+  print(data.df)
+ 
   if(!(label1 == label2)){
     g <- ggplot(plot.df  %>%
                   arrange(formatCol) , aes(x= x, y= y)) + theme_bw() +

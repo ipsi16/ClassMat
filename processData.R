@@ -1,5 +1,7 @@
 ### Extract a submatrix with row and column names and preserving format 
 ### (especially when extracting a single column in a matrix it becomes a row vector ! in base R)
+library(caret)
+
 submat<-function(mat,indr,indc)
 {
   # indc and indr can be: a set of positive integers, single 0 or a set of negative integer 
@@ -20,8 +22,6 @@ submat<-function(mat,indr,indc)
 ### Standardize data before projection
 standardizeData<-function(datadf)
 {
-  library(caret)
-  
   ### datadf: NxD data frame (data only with no labels)
   
   ### run dataStdz<-standardizeData(data)
@@ -41,7 +41,9 @@ standardizeData<-function(datadf)
   if (length(highlyCorData)>0) filteredDatadf <- submat(filteredDatadf,0,-highlyCorData)
   
   # rescale and center data
-  trans = preProcess(filteredDatadf, method=c("BoxCox", "center", "scale"))
+  
+  
+  trans = preProcess(filteredDatadf, method=c( "center", "scale"))  #removed boxcox. is it needed?
   datadfStdz = predict(trans, filteredDatadf)
   
   # return a data frame
@@ -255,6 +257,9 @@ pcaClassSPLOM<-function(dataStdz)
   
   ### STEP 4: project data onto the first 2 leading PC (they are already normalized (sum(pca$rotation[,i]^2)=1))
   dataPCA<-dataStdz%*%pca$rotation[,1:2] 
+  dataPCA <- data.frame(dataPCA)
+  names(dataPCA)  <- c("x","y")
+  
   
   return(dataPCA)
 }

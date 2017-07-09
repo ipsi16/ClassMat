@@ -1,0 +1,4 @@
+device_id,segment_code,start_time,end_time,activity_level
+851,1,2015-02-15 14:00:00,2015-02-15 14:29:00,moderate
+851,1,2015-02-15 14:30:00,2015-02-15 14:42:00,sedentary
+851,1,2015-02-15 14:43:00,2015-02-16 06:50:00,sleep

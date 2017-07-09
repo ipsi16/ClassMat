@@ -35,7 +35,10 @@ fluidPage(
   
   #body
   div(id='content',
-    inputPanel(fileInput('file',label=h3("File input"))),#,bsButton("submit",label = "Submit")),
+    inputPanel(
+      fileInput('file',label=h3("File input")),
+      selectInput('datasource',label=h3('Data Source Type'),choices = c('Generated','Sleep Data','MNIST'))
+      ),
     div(id='display-panel',class='panel panel-default',
         fluidRow(
           uiOutput(class='timeline bg-faded','timeline')

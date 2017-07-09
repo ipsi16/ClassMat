@@ -1,6 +1,9 @@
 library(MASS)
 
-getdata <-function()
+source("MNISTFeatureExtractor.R")
+source("SleepDataTransformer.R")
+
+get_default_data <-function()
 {
   # to access input data 
   # inFile <- input$chosenfile
@@ -21,7 +24,7 @@ data3<-mvrnorm(n = n3, c(10,10,0), Sigma)
 data4<-mvrnorm(n = n4, c(10,10,0), Sigma)
 #data5<-mvrnorm(n = n5, c(10,10,0), Sigma)
 
-data.df<-data.frame(index=seq(from=1, to=(n1+n2+n3+n4),by=1),
+data.df<-data.frame(#index=seq(from=1, to=(n1+n2+n3+n4),by=1),
                     x=c(data1[,1],data2[,1],data3[,1], data4[,1]),
                     y=c(data1[,2],data2[,2],data3[,2], data4[,2]),
                     z=c(data1[,3],data2[,3],data3[,3], data4[,3]),
@@ -31,4 +34,26 @@ data.df<-data.frame(index=seq(from=1, to=(n1+n2+n3+n4),by=1),
 
 return(data.df)
 
+}
+
+getMNISTData <- function()
+{
+  #get N-D data
+  data.df <- load_mnist()
+  
+  
+  return(data.df)
+}
+
+getSleepData <- function()
+{
+  data.df <- load_sleep_data()
+  return(data.df)
+}
+
+inputTypeToFunction <- c("default"=get_default_data,"mnist"=getMNISTData,"sleepData"=getSleepData )
+getdata <- function(datatype)
+{
+  inputTypeToFunction[[datatype]]()
+  
 }

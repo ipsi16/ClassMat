@@ -1,0 +1,20 @@
+t$mid_sleep_time[1:4]
+m <- mean(t$mid_sleep_time[1:4])
+t1 <- as.double(t$mid_sleep_time[1:4])
+
+(t1[1]-as.double(m))^2
+(t1[2]-as.double(m))^2
+(t1[3]-as.double(m))^2
+(t1[4]-as.double(m))^2
+
+(t1[1]-as.double(m))^2+ (t1[2]-as.double(m))^2+(t1[3]-as.double(m))^2+(t1[4]-as.double(m))^2
+
+
+variance1 <- var(t$mid_sleep_time[1:4])
+variance1
+
+sd <- sd(t$mid_sleep_time[1:2])
+m
+sd
+diff1 <-  t$mid_sleep_time[2] - t$mid_sleep_time[1]
+diff1

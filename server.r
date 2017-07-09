@@ -18,143 +18,85 @@ source("doPlot.R")
 function(input, output, session) {
   
   #get data from getdata function  
-  data.df <- getdata()
+  #data.df <- getdata()
   
   version1 <- 1
   
   #reactive variables v: n.col = numer of classes, counter, selected
-  v <<- reactiveValues(version = 1, max_version=1, n.col = nrow(unique(data.df["label"])), selected = list(), focusedPlotCoords = c(1,1))
+  v <<- reactiveValues(version = 0, max_version=1,  selected = list(),focusedPlotCoords = c(1,1)) #, focusedPlotCoords = c(1,1)) ,n.col = nrow(unique(data.df["label"])),
   
   #reactive values for df: df, labels, sel
-  df <- reactiveValues(Df = data.df, labels = getdata(), sel= list())
-  
-  sPlot <- reactiveVal()
+  df <- list(  sel= list(),labels=NULL) #Df = data.df,labels = getdata(),
   
   #for loading screen
   loading <- reactiveValues(flag = 0)
   
+  diag <- NULL
+  p <- NULL
+  uniq_labels <- NULL
   #outputOptions(output, "timeline", priority = 1)
   
-  # initially get data and plot lists
-  p <- getplotlist( 1, data.df , NULL , NULL)
-  diag <- getdiaglist(1, data.df)
-  p2 <- getplotlist2( 1, data.df , NULL , NULL)
-  palete <- bigplot(data.df)
-  uniq_labels <- unique(data.df[,ncol(data.df)])
-  comblabels <- combn(uniq_labels,2)
   
-  for (i in 1:length(p)) {
-    local({
-      n <- i # Make local variable
-      plotname <- paste("plot", n , sep="")
-      print(plotname)
-      output[[plotname]] <<- renderPlotly({
-        print(paste("Rendering plot ",n))
-        p[[n]]
-      })
-    })
-  }
-  
-  for (i in 1:length(diag)) {
-    local({
-      n <- i # Make local variable
-      plotname <- paste("diag", n , sep="")
-      output[[plotname]] <<- renderPlotly({
-        print(paste("Rendering diag ",n))
-        diag[[n]]
-      })
-    })
-  }
-  
-  for(i in 1:version1)
-  {
-    local({
-      snapshotName <- sprintf("snapshot%d",i)
-      print(paste("Assign ",snapshotName))
-      output[[snapshotName]] <<- renderImage({
-      
-      n <- length(uniq_labels)
-      noLowerTriangle <- (n^2-n)/2
-      k <-  1:noLowerTriangle
-      orderMatrix <- matrix(nrow = n, ncol = n)
-      orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
-      print("Order Matrix")
-      print(orderMatrix)
-      #generate snapshot and store as file
-      outfile <- sprintf("version%d.jpg",i)
-      print(outfile)
-      
-      
-      #jpeg(outfile,width=400, height=400)
-      g <- arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
-      ggsave(sprintf("version%d.jpg",i),g)
-      
-      #dev.off()
-      
-      #render snapshot on timeline
-      list(src = outfile, contentType = 'image/jpg', width = 150, height = 150, alt = "This is alternate text")
-      #ggsave(sprintf("version%d.jpg",v$version),g1)
-      #filename = sprintf("version%d.jpg",v$version)
-      #list(src = filename,alt = paste("Image number", v$version))
-      #g
-    }, deleteFile = FALSE)
-    })
-  }
-  #reactive({
-  #output[["palette"]] <<- renderPlotly({
-   # palete
-    #}) 
-  #})
-
+  observeEvent(input$datasource,{
+               inputmap <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
+               df$Df <<- getdata(inputmap[[input$datasource]])
+               v$version <<- 0
+               v$version <<- 1
+              }
+  )
   
   observeEvent(v$version,{
     
-    p <<- getplotlist( 1, df$Df , NULL , NULL)
-    diag <<- getdiaglist(1, df$Df)
-    uniq_labels <<- sort(unique(df$Df[,ncol(df$Df)]))
-    comblabels <<- combn(uniq_labels,2)
-    #print(paste("Inc version",v$version))
-    #v$version <<- v$version + 1
-    # Assign output names for created plots
-    for (i in 1:length(p)) {
-      local({
-        n <- i # Make local variable
-        plotname <- paste("plot", n , sep="")
-        output[[plotname]] <<- renderPlotly({
-          p[[n]]
+    print(paste("Version:",v$version))
+    if(v$version>0){
+      
+      print(df$Df)
+      p <<- getplotlylist( 1, df$Df , NULL , NULL)
+      diag <<- getdiaglist(1, df$Df)
+      uniq_labels <<- sort(unique(df$Df$label))
+      
+      comblabels <<- combn(uniq_labels,2)
+      #print(paste("Inc version",v$version))
+      #v$version <<- v$version + 1
+      # Assign output names for created plots
+      for (i in 1:length(p)) {
+        local({
+          n <- i # Make local variable
+          plotname <- paste("plot", n , sep="")
+          print(plotname)
+          output[[plotname]] <<- renderPlotly({
+            p[[n]]
+          })
         })
-      })
-    }
-    
-    for (i in 1:length(diag)) {
-      local({
-        n <- i # Make local variable
-        plotname <- paste("diag", n , sep="")
-        output[[plotname]] <<- renderPlotly({
-          diag[[n]]
+      }
+      
+      for (i in 1:length(diag)) {
+        local({
+          n <- i # Make local variable
+          plotname <- paste("diag", n , sep="")
+          output[[plotname]] <<- renderPlotly({
+            diag[[n]]
+          })
         })
-      })
-    }
-    
-    if(v$version>1 & v$version==v$max_version)
-    {
-      #for(i in 1:v$version)
-      #{
-      #print()
-          i <- v$version
-          snapshotName <- sprintf("snapshot%d",i)
-          output[[snapshotName]] <- renderImage({
-           
+      }
+      
+      if(v$version>0 & v$version==v$max_version)
+      {
+        i <- v$version
+        snapshotName <- sprintf("snapshot%d",i)
+        
+        output[[snapshotName]] <- renderImage({
+          
           force(i)
-          print(paste("i=",i))   
           outfile <<- sprintf("version%d.jpg",i)
           
           
           #generate snapshot and store as file
           if(i== v$version)
           {
-            print(outfile)
-            p2 <- getplotlist2( 1, df$Df , NULL , NULL)
+            p2 <<- getplotlist( 1, df$Df , NULL , NULL)
+            uniq_labels <<- sort(unique(df$Df$label))
+            print(uniq_labels)
             n <- length(uniq_labels)
             noLowerTriangle <- (n^2-n)/2
             k <-  1:noLowerTriangle
@@ -178,8 +120,10 @@ function(input, output, session) {
           #filename = sprintf("version%d.jpg",v$version)
           #list(src = filename,alt = paste("Image number", v$version))
         }, deleteFile = FALSE)
-      #}
+        #}
+      }
     }
+    
     #output$snapshot <- renderPlot({g1})
   })
   
@@ -189,16 +133,16 @@ function(input, output, session) {
   # merge function
   observeEvent(input$merge,
                { 
-                 print('===================================')
                  label1 <- v$focusedPlotCoords[1] 
                  label2 <- v$focusedPlotCoords[2]
                  
-                 
+                 print(df$Df[,c('label')])
+                 print(df$labels)
                   loading$flag <- 0
                   if(v$max_version==1)
                   {
-                    df$labels['label1'] <- df$Df[,c('label')]
-                     
+                    df$labels <<- data.frame(label1=df$Df[,c('label')])
+                     print(df$labels)
                   }
                   print(df$labels['label1'])
                     
@@ -209,15 +153,15 @@ function(input, output, session) {
                   v$max_version <<- v$max_version + 1
                   v$version <<- v$max_version
                
-               df$Df['label'] <- df$labels[, ncol(df$labels)]
+               df$Df['label'] <<- df$labels[, ncol(df$labels)]
                
                print("After manipulation")
                print(df$Df)
                
                #update using df$Df
-               p <- getplotlist( v$version, df$Df , NULL , NULL)
-               diag <- getdiaglist(v$version, df$Df)
-               auc <- getauclist(df$Df)
+               p <<- getplotlylist( v$version, df$Df , NULL , NULL)
+               diag <<- getdiaglist(v$version, df$Df)
+               #auc <- getauclist(df$Df)
                
                for (i in 1:length(p)) {
                  local({
@@ -242,7 +186,7 @@ function(input, output, session) {
                loading$flag <- 1
                
                uniq_labels <<- sort(unique(df$labels[,ncol(df$labels)]))
-               v$n.col <- length(uniq_labels)
+               #v$n.col <- length(uniq_labels)
                
                }
   )
@@ -280,7 +224,10 @@ function(input, output, session) {
                      
                      df$Df[(presenceRoster$x & presenceRoster$y),]$label <- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
                      if(v$max_version==1)
+                     {
                        df$labels['label1'] <- df$Df[,c('label')]
+                     }
+                       
                      old_col <- paste("label", v$max_version, sep="")
                      new_col <- paste("label", v$max_version + 1  , sep="")
                      df$labels[new_col] <<- df$Df$label 
@@ -311,7 +258,7 @@ function(input, output, session) {
                                       choices = unique(df$Df["label"]))
                  
                  df$Df['label'] <- data.df[, ncol(df$labels)]
-                 p <- getplotlist( v$version, df$Df , NULL , NULL)
+                 p <- getplotlylist( v$version, df$Df , NULL , NULL)
                  #print(p)
                  
                  for (i in 1:length(p)) {
@@ -328,7 +275,7 @@ function(input, output, session) {
                  
                  loading$flag <- 1
                  uniq_labels <- unique(df$Df[,ncol(df$labels)])
-                 v$n.col <- length(uniq_labels)
+                 #v$n.col <- length(uniq_labels)
                  
                }
   )
@@ -368,16 +315,22 @@ function(input, output, session) {
       timelineItemClickListeners[[i]]()
     }
       
-    tags$ul(class="timeline-list",
+    t <- tags$ul(class="timeline-list",
       lis
     )
+    t
   })
   
+  observeEvent(df$Df$label, {
+    uniq_labels <<- order(unique(df$Df[,c('label')]))
+    
+  })
   
   #Printing in grid
   output$plots <- renderUI({
-    
+    ver <- v$version
     n <- length(unique(df$Df[,c('label')]))   #number of classes/catgeories
+    print(paste("No of labels :",n))
     loading$flag <- 0
     col.width <- round(12/n) # Calculate bootstrap column width
     cnter <- 0 # Counter variable ------ counter for what?
@@ -422,15 +375,14 @@ function(input, output, session) {
       diag <- column(col.width, plotlyOutput(diagname, height = "100%", width = "100%"))
       
       #AUC plot
-      auc_cols <- lapply(1:(n-row_num), function(col_num) {
-        plotname <- paste("auc", order[z], sep="")
-        z <<- z-1
-        column(col.width, plotlyOutput(plotname, height = 70, width = 80))
-      })
+      #auc_cols <- lapply(1:(n-row_num), function(col_num) {
+        #plotname <- paste("auc", order[z], sep="")
+        #z <<- z-1
+        ##})
       
       # attach lda_cols, diag and cols2
       lda_cols[[length(lda_cols)+1]] <- diag
-      cols <- append(lda_cols,auc_cols)
+      cols <- lda_cols#append(lda_cols,auc_cols)
       fixedRow( style='height:auto',do.call(tagList, cols ) )
     })
     
@@ -490,33 +442,46 @@ function(input, output, session) {
   
   
   output$selectedPlot <- renderPlotly(
-  {
-    
-    t<-p[[1]]
-    if(length(v$focusedPlotCoords)!=0)
     {
-      label1 = v$focusedPlotCoords[1]
-      label2 =  v$focusedPlotCoords[2]
+      if(v$version>0)
+      {
+        print("Uniq labels")
+        print(uniq_labels)
+          if(length(which(v$focusedPlotCoords %in% uniq_labels))<2)
+            v$focusedPlotCoords <<- c(1,1)
+            
+          label1 = v$focusedPlotCoords[1]
+          label2 =  v$focusedPlotCoords[2]
+            
+          if(label1 == label2)
+          {
+            print("Here")
+              focusedPlot <- diag[[label1]]
+              print("End")
+          }
+          else
+          {  
+              comb_labels <- combn(uniq_labels,2)
+              n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
+              print(label1)
+              print(label2)
+              print(n)
+              focusedPlot <- p[[n]]
+          }
+          
+        
+          #t$layout$width <- 300
+          #t$layout$height <- 300
+          focusedPlot <- focusedPlot %>% layout(width=300,height=300,dragmode ="lasso")
+          focusedPlot$x$source <- "focusedPlot"
+          focusedPlot
+      }
+      else{
+        plotly_empty()
+      }
       
-      if(label1 == label2)
-      {
-        t <- diag[[label1]]
-      }
-      else
-      {
-        uniq_labels <- order(unique(df$Df[,ncol(df$Df)]))
-        comb_labels <- combn(uniq_labels,2)
-        n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
-        t <- p[[n]]
-      }
-    }
-    
-    #t$layout$width <- 300
-    #t$layout$height <- 300
-    t <- t %>% layout(width=300,height=300,dragmode ="lasso")
-    t$x$source <- "focusedPlot"
-    t
-  })
+      
+    })
   
   #output$selected <- renderPrint({
     #d <- event_data("plotly_selected",source = "focusedPlot")
