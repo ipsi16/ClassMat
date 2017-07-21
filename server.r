@@ -14,6 +14,7 @@ source("getdata.R")
 source("processData.R")
 source("plist.R")
 source("doPlot.R")
+source("utilities.R")
 
 function(input, output, session) {
   
@@ -34,14 +35,27 @@ function(input, output, session) {
   diag <- NULL
   p <- NULL
   uniq_labels <- NULL
+  inputFolderPath <- './input/'
+  datatypeInputFolderName <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
+  inputmap <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
   #outputOptions(output, "timeline", priority = 1)
   
-  
-  observeEvent(input$datasource,{
-               inputmap <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
-               df$Df <<- getdata(inputmap[[input$datasource]])
+
+
+  observeEvent(input$datasourceType,{
+               
+              print(input$datasourceFiles)
+              reset("datasourceFiles")
+               df$Df <<- getdata(inputmap[[input$datasourceType]])
+               if(input$datasourceType=="Sleep Data")
+               {
+                 actigraphDetailData <- getRepData(inputmap[[input$datasourceType]])
+                 df$actigraphRep <<- getActigraphBarReps(actigraphDetailData)
+               }
+              
                v$version <<- 0
                v$version <<- 1
+               v$max_version <<- 1
               }
   )
   
@@ -50,7 +64,6 @@ function(input, output, session) {
     print(paste("Version:",v$version))
     if(v$version>0){
       
-      print(df$Df)
       p <<- getplotlylist( 1, df$Df , NULL , NULL)
       diag <<- getdiaglist(1, df$Df)
       uniq_labels <<- sort(unique(df$Df$label))
@@ -63,7 +76,6 @@ function(input, output, session) {
         local({
           n <- i # Make local variable
           plotname <- paste("plot", n , sep="")
-          print(plotname)
           output[[plotname]] <<- renderPlotly({
             p[[n]]
           })
@@ -96,13 +108,11 @@ function(input, output, session) {
           {
             p2 <<- getplotlist( 1, df$Df , NULL , NULL)
             uniq_labels <<- sort(unique(df$Df$label))
-            print(uniq_labels)
             n <- length(uniq_labels)
             noLowerTriangle <- (n^2-n)/2
             k <-  1:noLowerTriangle
             orderMatrix <- matrix(nrow = n, ncol = n)
             orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
-            print(orderMatrix)
             
             #png(outfile)
             #arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
@@ -136,15 +146,13 @@ function(input, output, session) {
                  label1 <- v$focusedPlotCoords[1] 
                  label2 <- v$focusedPlotCoords[2]
                  
-                 print(df$Df[,c('label')])
-                 print(df$labels)
+                 
                   loading$flag <- 0
                   if(v$max_version==1)
                   {
                     df$labels <<- data.frame(label1=df$Df[,c('label')])
                      print(df$labels)
                   }
-                  print(df$labels['label1'])
                     
                   old_col <- paste("label", v$max_version, sep="")
                   new_col <- paste("label", v$max_version + 1  , sep="")
@@ -201,20 +209,36 @@ function(input, output, session) {
                    {
                      # display selected rows
                      d <- event_data("plotly_selected",source = "focusedPlot")
+                     selected_classes <- v$focusedPlotCoords
+                     #print("Selected classes")
+                     #print(selected_classes)
+                     
+                     #print(uniq_labels)
+                     if(v$focusedPlotCoords[1]==v$focusedPlotCoords[2])
+                       plotData <- getDiagPlotDataPoints(diag,v$focusedPlotCoords[1])
+                     else
+                       plotData <- getDataPoints(p,uniq_labels,v$focusedPlotCoords[1],v$focusedPlotCoords[2])
+                     #plotCardinal <- getPlotCardinal(uniq_labels,v$focusedPlotCoords[1],v$focusedPlotCoords[2])
+                     #print(plotData)
+                     #print(length(p))
+                     #print(attr(p[[plotCardinal]],'data'))
+                     
                     
-                     df$sel <- d[,c("x","y")]
-                     print(df$Df)
-                     print(df$sel[,c("x")])
+                     df$sel <<- d[,c("x","y")]
+                     #print("Projected LDA plot")
+                     #ldaData <- getLDAdata(df$Df,v$focusedPlotCoords[1],v$focusedPlotCoords[2])
+                     #print(ldaData)
                      df$sel[,c("x")] <- round(df$sel[,c("x")],digits=6)
                      df$sel[,c("y")] <- round(df$sel[,c("y")],digits=6)
                      #df$Df %>% mutate(x = round(x, 5) )
                      #xlist <- lapply(df$Df[,"x"], round, digits = 6)
-                     df$Df[,c("x")] <- round(df$Df[,c("x")],digits=6)
-                     df$Df[,c("y")] <- round(df$Df[,c("y")],digits=6)
+                     plotData[,c("x")] <- round(plotData[,c("x")],digits=6)
+                     plotData[,c("y")] <- round(plotData[,c("y")],digits=6)
 
-                     presenceRoster <- data.frame(x=(df$Df$x %in% df$sel$x),y=(df$Df$y %in% df$sel$y))
+                     #presenceRoster <- data.frame(x=(df$Df$x %in% df$sel$x),y=(df$Df$y %in% df$sel$y))
+                     presenceRoster <- data.frame(x=(plotData$x %in% df$sel$x),y=(plotData$y %in% df$sel$y))
                      to <- df$Df[(presenceRoster$x & presenceRoster$y),]
-                     print(to)
+                     #print(to)
                      
                      #print(df$Df$label)
                      #lvl <- levels(df$Df$label)
@@ -222,10 +246,10 @@ function(input, output, session) {
                      #levels(df$Df$label) <- c(lvl,as.character(as.integer(lvl[length(lvl)])+1)) 
                      #print(levels(df$Df$label))
                      
-                     df$Df[(presenceRoster$x & presenceRoster$y),]$label <- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
+                     df$Df[(presenceRoster$x & presenceRoster$y),]$label <<- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
                      if(v$max_version==1)
                      {
-                       df$labels['label1'] <- df$Df[,c('label')]
+                       df$labels <<- data.frame(label1=df$Df[,c('label')])
                      }
                        
                      old_col <- paste("label", v$max_version, sep="")
@@ -245,41 +269,6 @@ function(input, output, session) {
                
   )
   
-  
-  # undo function
-  observeEvent(input$undo,
-               { 
-                 loading$flag <- 0
-                 last_col <- paste("label", v$version, sep="")
-                 # ADDING DYNAMIC COLUMNS
-                 df$labels[last_col] <<-  NULL
-                 v$version <<- v$version - 1
-                 updateSelectizeInput(session, "variable",
-                                      choices = unique(df$Df["label"]))
-                 
-                 df$Df['label'] <- data.df[, ncol(df$labels)]
-                 p <- getplotlylist( v$version, df$Df , NULL , NULL)
-                 #print(p)
-                 
-                 for (i in 1:length(p)) {
-                   local({
-                     n <- i # Make local variable
-                     plotname <- paste("plot", n , sep="")
-                     #print(plotname)
-                     output[[plotname]] <<- renderPlotly({
-                       p[[n]]
-                       
-                     })
-                   })
-                 }
-                 
-                 loading$flag <- 1
-                 uniq_labels <- unique(df$Df[,ncol(df$labels)])
-                 #v$n.col <- length(uniq_labels)
-                 
-               }
-  )
-  
   onTimelineItemClickListener <- function(i)
   {
     function()
@@ -288,7 +277,6 @@ function(input, output, session) {
         
         print(sprintf("label%d",i))
         df$Df[,c("label")] <<- df$labels[sprintf("label%d",i)]
-        print(df$Df$label)
         v$version <<- i
         #reset labels to one in the version 
         #
@@ -330,7 +318,6 @@ function(input, output, session) {
   output$plots <- renderUI({
     ver <- v$version
     n <- length(unique(df$Df[,c('label')]))   #number of classes/catgeories
-    print(paste("No of labels :",n))
     loading$flag <- 0
     col.width <- round(12/n) # Calculate bootstrap column width
     cnter <- 0 # Counter variable ------ counter for what?
@@ -341,12 +328,8 @@ function(input, output, session) {
     k <-  1:noLowerTriangle
     orderMatrix <<- matrix(nrow = n, ncol = n)
     orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
-    print(orderMatrix)
-    print(uniq_labels)
     order <- c(t(orderMatrix))
     order <- order[!is.na(order)]
-    print(order)
-    
     
     #'global' variables as counters
     g <- 1 # for lda plot
@@ -445,8 +428,6 @@ function(input, output, session) {
     {
       if(v$version>0)
       {
-        print("Uniq labels")
-        print(uniq_labels)
           if(length(which(v$focusedPlotCoords %in% uniq_labels))<2)
             v$focusedPlotCoords <<- c(1,1)
             
@@ -455,24 +436,19 @@ function(input, output, session) {
             
           if(label1 == label2)
           {
-            print("Here")
-              focusedPlot <- diag[[label1]]
-              print("End")
+            focusedPlot <- diag[[label1]]
           }
           else
           {  
               comb_labels <- combn(uniq_labels,2)
               n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
-              print(label1)
-              print(label2)
-              print(n)
               focusedPlot <- p[[n]]
           }
           
         
           #t$layout$width <- 300
           #t$layout$height <- 300
-          focusedPlot <- focusedPlot %>% layout(width=300,height=300,dragmode ="lasso")
+          focusedPlot <- focusedPlot %>% layout(width=270,height=270,dragmode ="lasso")
           focusedPlot$x$source <- "focusedPlot"
           focusedPlot
       }
@@ -483,11 +459,42 @@ function(input, output, session) {
       
     })
   
-  #output$selected <- renderPrint({
-    #d <- event_data("plotly_selected",source = "focusedPlot")
-    #if (is.null(d)) "Click and drag events (i.e., select/lasso) appear here (double-click to clear)" else d[, c("x","y")]
-    
-  #})
+  output$selectedDataPoints <- renderUI({
+    d <- event_data("plotly_selected",source = "focusedPlot")
+    if(!is.null(d)| length(d)!=0)
+    {
+      selected_classes <- v$focusedPlotCoords
+      #print(selected_classes)
+      if(selected_classes[1]==selected_classes[2])
+        plotData <- getDiagPlotDataPoints(diag,selected_classes[1])
+      else
+        plotData <- getDataPoints(p,uniq_labels,selected_classes[1],selected_classes[2])
+      #print(plotData)
+      
+      df$sel <<- d[,c("x","y")]
+      #print(df$sel[,c("x","y")])
+      df$sel[,c("x")] <- round(df$sel[,c("x")],digits=6)
+      df$sel[,c("y")] <- round(df$sel[,c("y")],digits=6)
+      
+      plotData[,c("x")] <- round(plotData[,c("x")],digits=6)
+      plotData[,c("y")] <- round(plotData[,c("y")],digits=6)
+      
+      presenceRoster <- data.frame(x=(plotData$x %in% df$sel$x),y=(plotData$y %in% df$sel$y))
+      #print(presenceRoster)
+      #print(length(df$actigraphRep))
+      selected_actigraph_plots <- df$actigraphRep[which(presenceRoster$x & presenceRoster$y)]
+      rows <- lapply(selected_actigraph_plots, function(selected_actigraph_plot){
+        #print(str(selected_actigraph_plot))
+        p <- renderPlot(selected_actigraph_plot+theme(legend.position = "none"),height = 200)
+        fixedRow(column(12,p))
+      })
+      tagList(rows)
+    }
+    else
+      fixedRow()
+  })
+  
+  
   
   # To display loading page
   observe({
@@ -514,7 +521,6 @@ function(input, output, session) {
     {
       label1 = v$selected[1]
       label2 =  v$selected[2]
-      print(paste(label1,label2,sep=" "))
       
       if(label1 == label2)
       {

@@ -1,9 +1,60 @@
 #source("global.R")
 #source("./Documents/QCRI/ClassMat2/ClassMat/ActigraphFeatureExtractor.R")
+library(lubridate)
 source("ActigraphFeatureExtractor.R")
+source("utilities.R")
+
+min_eq <- function(date_time)
+{
+  time <- ymd_hms(date_time)
+  min_passed <- hour(time)*60 + minute(time)
+  min_passed
+}
+
+segment_data_at_time<- function(sleep_data,hr=0,min=0,sec=0){
+  
+  sleep_data$rep_segment_code <- rep(1,nrow(sleep_data))
+  
+  for(i in 1:nrow(d))
+  {
+    break_time <- sleep_data[i,]$start_time
+    hour(break_time) <- hr
+    minute(break_time) <- min
+    second(break_time) <- sec
+    if(sleep_data[i,]$start_time<break_time && sleep_data[i,]$end_time>break_time)
+    {
+      new_df <- sleep_data[i,]
+      new_df$start_time <- break_time
+      
+      sleep_data[i,]$end_time <- break_time - 1
+      sleep_data <- insertDF(sleep_data,i+1,new_df)
+      sleep_data[(i+1):nrow(sleep_data),]$rep_segment_code <- (sleep_data[i,]$rep_segment_code+1)
+    }
+  }
+  sleep_data
+}
+
+load_detail_data_for_actigraph <- function(base_dir = "./input/QUEST",is_labelled = TRUE)
+{ 
+  files_list <- list.files(base_dir,pattern = "*.csv")
+  sleep_data <- lapply(files_list,function(file_name){ 
+    getDetailDataForUser(sub(".csv","",file_name),file.path(base_dir,file_name))
+  })
+  
+  #remove NULL
+  sleep_data[sapply(sleep_data,is.null)]<-NULL
+  
+  tuned_sleep_data <- lapply(sleep_data, function(per_user_sleep_data){
+    per_user_sleep_data <- per_user_sleep_data %>% mutate(duration=as.numeric(end_time-start_time,"mins"),start_time_min= min_eq(start_time),end_time_min= min_eq(end_time))
+    per_user_sleep_data
+    #per_user_group_sleep_data <- per_user_sleep_data %>% group_by(segment_code,activity_level) %>% summarise(sum_dur=sum(duration))
+  })
+  tuned_sleep_data
+}
 
 load_sleep_data <- function(base_dir = "./input/QUEST",is_labelled = TRUE)
 { 
+  print(base_dir)
   files_list <- list.files(base_dir,pattern = "*.csv")
   
   # get list of user points
@@ -13,8 +64,6 @@ load_sleep_data <- function(base_dir = "./input/QUEST",is_labelled = TRUE)
   sleep_data_df <- cleanData(sleep_data)
   if(is_labelled)
     sleep_data_df <- categorizeData(sleep_data_df)
-  print("Struct of sleep data ------")
-  print(str(sleep_data_df))
   sleep_data_df
   #dataStdzdf<-standardizeData(sleep_data[,-1])
   #dataStdz<-as.matrix(dataStdzdf[,1:datadim])
@@ -28,8 +77,6 @@ cleanData <- function(data_list){
   #convert ot data frame
   t <- as.data.frame(matrix(unlist(data_list),ncol=length(data_list[[1]]),byrow = TRUE),stringsAsFactors=FALSE)
   names(t) <- names(data_list[[1]])
-    print("T===========")
-  print(t)
   options(digits=15,scipen = 100)
   t$avg_mid_time = as.numeric(t$avg_mid_time)
   t$shift_mid_time = as.numeric(t$shift_mid_time)

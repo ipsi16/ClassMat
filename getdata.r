@@ -3,7 +3,7 @@ library(MASS)
 source("MNISTFeatureExtractor.R")
 source("SleepDataTransformer.R")
 
-get_default_data <-function()
+get_default_data <-function(datasource_folder=NULL)
 {
   # to access input data 
   # inFile <- input$chosenfile
@@ -36,7 +36,7 @@ return(data.df)
 
 }
 
-getMNISTData <- function()
+getMNISTData <- function(datasource_folder=NULL)
 {
   #get N-D data
   data.df <- load_mnist()
@@ -45,15 +45,30 @@ getMNISTData <- function()
   return(data.df)
 }
 
-getSleepData <- function()
+getSleepData <- function(datasource_folder='./input/QUEST')
 {
-  data.df <- load_sleep_data()
+  data.df <- load_sleep_data(base_dir = datasource_folder)
   return(data.df)
 }
 
-inputTypeToFunction <- c("default"=get_default_data,"mnist"=getMNISTData,"sleepData"=getSleepData )
-getdata <- function(datatype)
+getActigraphRepData <- function(datasource_folder=NULL)
 {
-  inputTypeToFunction[[datatype]]()
+  load_detail_data_for_actigraph()
+}
+
+inputTypeToFunction <- c("default"=get_default_data,"mnist"=getMNISTData,"sleepData"=getSleepData )
+getdata <- function(datatype,datasource_folder=NULL)
+{
+  if(is.null(datasource_folder))
+    inputTypeToFunction[[datatype]]()
+  else
+    inputTypeToFunction[[datatype]](datasource_folder)
   
+}
+inputTypeToRepFunction <- c("sleepData"=getActigraphRepData )
+getRepData <- function(datatype,datasource_folder=NULL){
+  if(is.null(datasource_folder))
+    inputTypeToRepFunction[[datatype]]()
+  else
+    inputTypeToRepFunction[[datatype]](datasource_folder)
 }

@@ -36,20 +36,22 @@ fluidPage(
   #body
   div(id='content',
     inputPanel(
-      fileInput('file',label=h3("File input")),
-      selectInput('datasource',label=h3('Data Source Type'),choices = c('Generated','Sleep Data','MNIST'))
+      fileInput('datasourceFiles',label=h3("Data Source"),multiple = TRUE, 
+                accept=c('text/csv','text/comma-separated-values,text/plain','.csv')),
+      selectInput('datasourceType',label=h3('Data Source Type'),choices = c('Generated','Sleep Data','MNIST')),
+      submitButton(text = "Apply Changes", icon = NULL, width = NULL)
       ),
     div(id='display-panel',class='panel panel-default',
         fluidRow(
           uiOutput(class='timeline bg-faded','timeline')
         ),
-        fluidRow(
-          column(7,id='overview',class='panel panel-default',div(class='panel-body',uiOutput('plots')) ), #style="background-color:#AA9C99;height:100%",plotlyOutput('splom')),
-          column(4,class='panel panel-default',
-                        div(class='panel-heading','Main View'),
-                        div(class='panel-body',plotlyOutput('selectedPlot',height=300),controlPanel),
-                        column(1,detailUi)
-                )
+        fluidRow(style='padding-top:10px',
+            column(6,id='overview',class='panel panel-default',div(class='panel-body',uiOutput('plots')) ), #style="background-color:#AA9C99;height:100%",plotlyOutput('splom')),
+            column(3,id='focusedview',class='panel panel-default',
+                          div(class='panel-heading','Main View'),
+                          div(class='panel-body',plotlyOutput('selectedPlot',height=300),controlPanel)
+                  ),
+            column(2,class='panel panel-default',style='height:400px;overflow:scroll',uiOutput('selectedDataPoints',height=300))
               )
       )
   )

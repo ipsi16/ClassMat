@@ -1,10 +1,28 @@
 library(gridExtra)
 library(ggplot2)
 library(MASS)
+
 library('RColorBrewer')
 library('reshape2')
 
 source('processData.R')
+
+getLDAdata <- function(data.df,l1,l2){
+  
+  uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
+  comb_labels <- combn(uniq_labels,2)
+  
+  dataLDA <- data.df
+    #project N-D data on LDA / PCA
+    if(length(data.df[,!(names(data.df)  %in% 'label')])>2)
+    {
+      labels <- data.df[,c('label')]
+      dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
+      dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
+      dataLDA<-ldaClassSPLOM(dataStdz,labels,l1,l2)
+      
+    }
+}
 
 # Returns LIST of LDA plotly objects
 getplotlylist <- function(counter, data.df, brushedlines, clickedline)
@@ -158,7 +176,14 @@ getdiaglist <- function(counter, data.df)
    #coloursvec <- brewer.pal(12, "Paired")
    #p <- lapply(1:ncol(comb_labels), function(i) doPlot(counter, data.df,comb_labels[1, i], comb_labels[2, i],  NULL, NULL, coloursvec))
    p <- lapply(1:ncol(comb_labels), function(i) LDA_ROC( dataStdz[which(datalabels== comb_labels[1, i]),] , dataStdz[which(datalabels== comb_labels[2, i]),] ,nboot=2))
-#   
-   p
+#  
    return(p)
+ }
+ 
+ getActigraphBarReps <- function(actigraph_data)
+ {
+   actigraphBarReps <- lapply(actigraph_data,function(per_user_actigraph_data){
+     getActigraphTimelineRep(per_user_actigraph_data,12,0,0)
+     #ggplot(per_user_actigraph_data,aes(x=segment_code,y=sum_dur)) + geom_col(aes(fill=activity_level))
+   })
  }

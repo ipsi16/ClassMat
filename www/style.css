@@ -47,7 +47,21 @@
 {
   padding-left:15px;
 }
+.panel-body
+{
+  padding:0px 5px;
+}
 #overview
 {
   margin-right: 15px;
+  padding:0px;
+}
+#focusedview
+{
+  margin-right: 15px;
+}
+#selectedDataPoints
+{
+  max-height:300;
+  overflow:scroll;
 }

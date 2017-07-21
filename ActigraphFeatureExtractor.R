@@ -3,11 +3,27 @@ library(tidyverse)
 
 #t <-  "/Users/IpsitaPrakash/Documents/QCRI/ClassMat2/ClassMat/input/QUEST-BC_44-2015.csv"
 #file_name<-file.path("./Documents/QCRI/ClassMat2/ClassMat/input/QUEST","QUEST-BC_44-2015.csv")
-getSummarySleepDataRepForUser <- function(id,file_name)
+getDetailActigraphData <-  function(file_name)
 {
   actigraph_data = read_csv(file_name,col_types = 
                               cols(start_time=col_datetime(),
                                    end_time=col_datetime()))
+  actigraph_data
+}
+
+getDetailDataForUser <- function(id,file_name)
+{
+  actigraph_data <- getDetailActigraphData(file_name)
+  sleep_data <- actigraph_data %>% filter(activity_level == "sleep") %>% mutate(id=id,duration = as.numeric(end_time - start_time,"hours"), mid_sleep_time = start_time + duration/2)
+  if(nrow(sleep_data) %in% c(0,1) )
+    NULL
+  else
+    actigraph_data
+}
+
+getSummarySleepDataRepForUser <- function(id,file_name)
+{
+  actigraph_data <- getDetailActigraphData(file_name)
   sleep_data <- actigraph_data %>% filter(activity_level == "sleep") %>% mutate(duration = as.numeric(end_time - start_time,"hours"), mid_sleep_time = start_time + duration/2)
   if(nrow(sleep_data) %in% c(0,1) )
       NULL
@@ -22,6 +38,8 @@ getSummarySleepDataRepForUser <- function(id,file_name)
     c(id=id,avg_mid_time=avg_mid_time,shift_mid_time=shift_mid_time,avg_sleep_duration=avg_sleep_duration,shift_sleep_duration=shift_sleep_duration) 
   }
 }
+
+
 
 #getSleepDataRepForUser("QUEST-BC_103-2015","./Documents/QCRI/ClassMat2/ClassMat/input/QUEST/QUEST-BC_148-2015.csv")
 
