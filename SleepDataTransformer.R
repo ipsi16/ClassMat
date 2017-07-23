@@ -70,7 +70,6 @@ load_sleep_data <- function(base_dir = "./input/QUEST",is_labelled = TRUE)
   
 }
 cleanData <- function(data_list){
-  
   #remove NULL
   data_list[sapply(data_list,is.null)]<-NULL
   
@@ -87,7 +86,7 @@ cleanData <- function(data_list){
 categorizeData <- function(dataf)#,method='kmeans')
 {
   #remove unnecessary variables from the observations
-  t <- kmeans(dataf[,-c(1)],centers = 6, nstart = 20)
+  t <- kmeans(dataf[,-c(1)],centers = 1, nstart = 20)
   dataf$label <- t$cluster
   dataf
 }

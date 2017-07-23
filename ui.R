@@ -12,10 +12,13 @@ controlPanel <- fluidPage(
            actionButton("merge",'Merge'),
            actionButton("split",'Split'),
            actionButton('generate','Generate'),
-           tags$input(id='k',type='text',size='2',hint='k')
-)
-detailUi <- tags$div(
-  
+           numericInput(inputId='k',label=NULL,value=1,min=1),
+           div(id='renameDiv',
+             textInput('renameTxt',label="",value=""),
+             actionButton('renameBtn','Rename')
+           )
+           
+           
 )
 
 fluidPage(
@@ -39,7 +42,9 @@ fluidPage(
       fileInput('datasourceFiles',label=h3("Data Source"),multiple = TRUE, 
                 accept=c('text/csv','text/comma-separated-values,text/plain','.csv')),
       selectInput('datasourceType',label=h3('Data Source Type'),choices = c('Generated','Sleep Data','MNIST')),
-      submitButton(text = "Apply Changes", icon = NULL, width = NULL)
+      actionButton('submitBtn', "Submit"),
+      downloadButton('download',"Save")
+      #actionButton('save','Save',icon=icon("save",lib="glyphicon"))
       ),
     div(id='display-panel',class='panel panel-default',
         fluidRow(
@@ -49,7 +54,9 @@ fluidPage(
             column(6,id='overview',class='panel panel-default',div(class='panel-body',uiOutput('plots')) ), #style="background-color:#AA9C99;height:100%",plotlyOutput('splom')),
             column(3,id='focusedview',class='panel panel-default',
                           div(class='panel-heading','Main View'),
-                          div(class='panel-body',plotlyOutput('selectedPlot',height=300),controlPanel)
+                          div(class='panel-body',plotlyOutput('selectedPlot',height=300),
+                              #imageOutput('hoveredDpView',width="100px",height="100px"),
+                              controlPanel)
                   ),
             column(2,class='panel panel-default',style='height:400px;overflow:scroll',uiOutput('selectedDataPoints',height=300))
               )

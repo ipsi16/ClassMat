@@ -27,33 +27,33 @@ getLDAdata <- function(data.df,l1,l2){
 # Returns LIST of LDA plotly objects
 getplotlylist <- function(counter, data.df, brushedlines, clickedline)
 {
+  p <- list()
   uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
-  comb_labels <- combn(uniq_labels,2)
-  
-  #project data in 2D using PCA
-  dataLDA <- data.df
-  #project N-D data on LDA / PCA
-  
-  
-  # Set palette:
-  # NAME; No.OF COLORS
-  # Accent 8
-  # Dark2 8
-  # RColorBrewer 3
-  # Paired 12
-  # Pastel1 9
-  # Pastel2 8
-  # Set1 9
-  # Set2 8
-  # Set3 12
-  coloursvec <- brewer.pal(8, "Dark2")
-  palette(coloursvec)
-  
-  
- 
-  
-  # Replace doPlot with function that returns plots given 2 labels
-  p <- lapply(1:ncol(comb_labels), function(i)
+  if(length(uniq_labels)>1)
+  {
+    comb_labels <- combn(uniq_labels,2)
+    
+    #project data in 2D using PCA
+    dataLDA <- data.df
+    #project N-D data on LDA / PCA
+    
+    
+    # Set palette:
+    # NAME; No.OF COLORS
+    # Accent 8
+    # Dark2 8
+    # RColorBrewer 3
+    # Paired 12
+    # Pastel1 9
+    # Pastel2 8
+    # Set1 9
+    # Set2 8
+    # Set3 12
+    coloursvec <- brewer.pal(8, "Dark2")
+    palette(coloursvec)
+    
+    # Replace doPlot with function that returns plots given 2 labels
+    p <- lapply(1:ncol(comb_labels), function(i)
     {
       l1 <- comb_labels[1,i]
       l2 <- comb_labels[2,i]
@@ -69,7 +69,9 @@ getplotlylist <- function(counter, data.df, brushedlines, clickedline)
         
       }
       doPlotly(counter, dataLDA, comb_labels[1, i], comb_labels[2, i],  brushedlines, clickedline, coloursvec)
-  })
+    })
+  }
+  
   
   return(p)
 }
@@ -77,56 +79,54 @@ getplotlylist <- function(counter, data.df, brushedlines, clickedline)
 # Returns LIST of LDA plot objects
 getplotlist <- function(counter, data.df, brushedlines, clickedline)
 {
+  p <- list()
   uniq_labels <- sort(unique(data.df[,c('label')]))
-  comb_labels <- combn(uniq_labels,2)
-  
-  # Set palette:
-  # NAME; No.OF COLORS
-  # Accent 8
-  # Dark2 8
-  # RColorBrewer 3
-  # Paired 12
-  # Pastel1 9
-  # Pastel2 8
-  # Set1 9
-  # Set2 8
-  # Set3 12
-  
-  coloursvec <- brewer.pal(8, "Dark2")
-  palette(coloursvec)
-  
-  # Replace doPlot with function that returns plots given 2 labels
-  p <- lapply(1:ncol(comb_labels), function(i)
+  if(length(uniq_labels)>1)
   {
-    l1 <- comb_labels[1,i]
-    l2 <- comb_labels[2,i]
+    comb_labels <- combn(uniq_labels,2)
     
-    dataLDA <- data.df
-    #project N-D data on LDA / PCA
-    if(length(data.df[,!(names(data.df)  %in% 'label')])>2)
+    # Set palette:
+    # NAME; No.OF COLORS
+    # Accent 8
+    # Dark2 8
+    # RColorBrewer 3
+    # Paired 12
+    # Pastel1 9
+    # Pastel2 8
+    # Set1 9
+    # Set2 8
+    # Set3 12
+    
+    coloursvec <- brewer.pal(8, "Dark2")
+    palette(coloursvec)
+    
+    # Replace doPlot with function that returns plots given 2 labels
+    p <- lapply(1:ncol(comb_labels), function(i)
     {
-      labels <- data.df[,c('label')]
-      dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
-      dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
-      dataLDA<-ldaClassSPLOM(dataStdz,labels,l1,l2)
+      l1 <- comb_labels[1,i]
+      l2 <- comb_labels[2,i]
       
-    }
-    
-    
-    doPlot(counter, dataLDA, comb_labels[1, i], comb_labels[2, i],  brushedlines, clickedline, coloursvec)
-  })
-  
-  return(p)
+      dataLDA <- data.df
+      #project N-D data on LDA / PCA
+      if(length(data.df[,!(names(data.df)  %in% 'label')])>2)
+      {
+        labels <- data.df[,c('label')]
+        dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
+        dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
+        dataLDA<-ldaClassSPLOM(dataStdz,labels,l1,l2)
+        
+      }
+      
+      
+      doPlot(counter, dataLDA, comb_labels[1, i], comb_labels[2, i],  brushedlines, clickedline, coloursvec)
+    })
+  }
+  t <- getdiaglist(counter,data.df)
+  return(append(p,t))
 }
-
-
-# Returns diagonal list of plots
-# Replace doPlot with LDA generating function
 getdiaglist <- function(counter, data.df)
 {
-  
   uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
-  comb_labels <- combn(uniq_labels,2)
   coloursvec <- brewer.pal(8, "Dark2")
   palette(coloursvec)
   
@@ -135,7 +135,36 @@ getdiaglist <- function(counter, data.df)
   if(data.df[,!(names(data.df)  %in% c('id','label'))]>2)
   {
     labels <- data.df[,c('label')]
+    print(data.df)
     dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
+    print(dataStdzdf)
+    dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
+    dataPCA <- pcaClassSPLOM(dataStdz)
+    dataPCA$label <- labels
+  }
+  
+  p <- lapply(1:length(uniq_labels), function(i) doPlot(counter, dataPCA, uniq_labels[i], uniq_labels[i],  NULL, NULL, coloursvec))
+  
+  return(p)
+}
+
+# Returns diagonal list of plots
+# Replace doPlot with LDA generating function
+getdiaglylist <- function(counter, data.df)
+{
+  
+  uniq_labels <- sort(unique(data.df[,ncol(data.df)]))
+  coloursvec <- brewer.pal(8, "Dark2")
+  palette(coloursvec)
+  
+  #dataPCA <- data.df[,!(names(data.df)  %in% c('id','label'))]
+  dataPCA <- data.df
+  if(data.df[,!(names(data.df)  %in% c('id','label'))]>2)
+  {
+    labels <- data.df[,c('label')]
+    print(data.df)
+    dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
+    print(dataStdzdf)
     dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
     dataPCA <- pcaClassSPLOM(dataStdz)
     dataPCA$label <- labels

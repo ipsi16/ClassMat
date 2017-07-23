@@ -137,7 +137,6 @@ getActigraphTimelineRep <- function(user_activity_df,break_time_hr,break_time_mi
   hour(time_of_ref) <- 0
   minute(time_of_ref) <- 0
   second(time_of_ref) <- 0
-  print(time_of_ref)
   
   Sys.setenv(TZ='UTC')
   
@@ -148,7 +147,6 @@ getActigraphTimelineRep <- function(user_activity_df,break_time_hr,break_time_mi
   second(x_lim_start) <- break_time_sec
   
   x_limits <- c(x_lim_start,(x_lim_start+86400))
-  print(x_limits)
   y_limits <- c((time_of_ref-86400),(time_of_ref+(l+1)*86400))
   
   g <<- ggplot(data=user_activity_df, aes(x=user_activity_df$start_time,y=user_activity_df$start_time)) + scale_x_datetime(name = "",labels=date_format("%H:%M"),breaks=date_breaks("4 hour"),minor_breaks = date_breaks("2 hour"),limits = x_limits)+ scale_y_datetime(name = "",labels=date_format("%d-%m-%Y"))+theme(legend.position="none")
