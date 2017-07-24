@@ -53,7 +53,10 @@ getSleepData <- function(datasource_folder='./input/QUEST')
 
 getActigraphRepData <- function(datasource_folder=NULL)
 {
-  load_detail_data_for_actigraph()
+  if(is.null(datasource_folder))
+    load_detail_data_for_actigraph()
+  else
+    load_detail_data_for_actigraph(datasource_folder)
 }
 
 inputTypeToFunction <- c("default"=get_default_data,"mnist"=getMNISTData,"sleepData"=getSleepData )

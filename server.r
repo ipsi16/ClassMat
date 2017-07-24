@@ -61,8 +61,10 @@ function(input, output, session) {
     
     if(input$datasourceType=="Sleep Data")
     {
-      actigraphDetailData <- getRepData(inputmap[[input$datasourceType]])
+      actigraphDetailData <- getRepData(inputmap[[input$datasourceType]],userInputDataSourceFolderPath)
       df$actigraphRep <<- getActigraphBarReps(actigraphDetailData)
+      for(i in 1:length(df$actigraphRep))
+        ggsave(sprintf("dp-%d.jpg",i),df$actigraphRep[[i]])
     }
     
     v$version <<- 0
@@ -520,9 +522,16 @@ function(input, output, session) {
       
       presenceRoster <- data.frame(x=(plotData$x %in% df$sel$x),y=(plotData$y %in% df$sel$y))
       print(which(presenceRoster$x & presenceRoster$y))
-      selected_actigraph_plots <- df$actigraphRep[which(presenceRoster$x & presenceRoster$y)]
-      rows <- lapply(selected_actigraph_plots, function(selected_actigraph_plot){
-        p <- renderPlot(selected_actigraph_plot+theme(legend.position = "none"),height = 200)
+      selected_actigraph_plots_idx <- which(presenceRoster$x & presenceRoster$y)#df$actigraphRep[which(presenceRoster$x & presenceRoster$y)]
+      rows <- lapply(1:length(selected_actigraph_plots_idx), function(i){
+        imgFilePath <- sprintf('dp-%d.jpg',selected_actigraph_plots_idx[[i]]) 
+        p <- renderImage({
+                              list(src = imgFilePath,
+                               contentType = 'image/jpg',
+                               width = 150,
+                               height = 80,
+                               alt = "This is alternate text")},deleteFile = FALSE)
+        #p <- renderPlot(selected_actigraph_plot+theme(legend.position = "none"),height = 200)
         fixedRow(column(12,p))
       })
       tagList(rows)
@@ -602,6 +611,35 @@ function(input, output, session) {
     write.csv(datadf,file)
   }
   )
+  
+  output$hoveredDpView <- renderUI({
+    
+    eventdata <- event_data("plotly_hover", source = "focusedPlot")
+    #validate(need(!is.null(eventdata), "Hover over the time series chart to populate this heatmap"))
+    if(!is.null(eventdata))
+    {
+      pointIdx <- as.numeric(eventdata$pointNumber)[1]
+      print(pointIdx)
+      
+      
+      outfile <- sprintf("dp-%d.jpg",pointIdx+1)
+      #list(src = outfile,
+           #contentType = 'image/jpg',
+           #width = 150,
+           #height = 150,
+           #alt = "")
+      t <- renderImage({
+        list(src = outfile,
+             contentType = 'image/jpg',
+             width = 150,
+             height = 150,
+             alt = "")},
+        deleteFile = FALSE)
+      tags$img(t)
+      
+    }
+    
+  })
   
 }
 

@@ -55,7 +55,7 @@ fluidPage(
             column(3,id='focusedview',class='panel panel-default',
                           div(class='panel-heading','Main View'),
                           div(class='panel-body',plotlyOutput('selectedPlot',height=300),
-                              #imageOutput('hoveredDpView',width="100px",height="100px"),
+                              uiOutput('hoveredDpView',width="100px",height="100px"),
                               controlPanel)
                   ),
             column(2,class='panel panel-default',style='height:400px;overflow:scroll',uiOutput('selectedDataPoints',height=300))
