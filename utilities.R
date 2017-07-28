@@ -23,3 +23,18 @@ insertDF <- function(data_frame,pos,new_df){
   data_frame[pos:(pos+nrow(new_df)-1),]<- new_df
   data_frame
 }
+
+###
+###priorityCLass - class to be displayed at the top
+###displayOrder - current order of ids where each id corresponds to its column position in combinationOrderMapMat
+###combinationOrderMapMat - map between the combination
+
+prioritizeClassDisplay <- function(priorityClass , displayOrder, combinationOrderMapMat)
+{
+     currentCombOrderMat <- combinationOrderMapMat[c(1,2),displayOrder]
+     t <- c(which(currentCombOrderMat[2,]==priorityClass),which(currentCombOrderMat[1,]==priorityClass))
+     newOrder <- c(displayOrder[t],displayOrder[-t])
+     #newOrder <- c(which(currentCombOrderMat[2,]==priorityClass),which(currentCombOrderMat[1,]==priorityClass),which(currentCombOrderMat[2,]!=priorityClass & currentCombOrderMat[1,]!=priorityClass))
+      print(newOrder)
+      newOrder
+}

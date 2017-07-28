@@ -149,7 +149,7 @@ getActigraphTimelineRep <- function(user_activity_df,break_time_hr,break_time_mi
   x_limits <- c(x_lim_start,(x_lim_start+86400))
   y_limits <- c((time_of_ref-86400),(time_of_ref+(l+1)*86400))
   
-  g <<- ggplot(data=user_activity_df, aes(x=user_activity_df$start_time,y=user_activity_df$start_time)) + scale_x_datetime(name = "",labels=date_format("%H:%M"),breaks=date_breaks("4 hour"),minor_breaks = date_breaks("2 hour"),limits = x_limits)+ scale_y_datetime(name = "",labels=date_format("%d-%m-%Y"))+theme(legend.position="none")
+  g <<- ggplot(data=user_activity_df, aes(x=user_activity_df$start_time,y=user_activity_df$start_time)) + scale_x_datetime(name = "",labels=date_format("%H:%M"),breaks=date_breaks("8 hour"),minor_breaks = date_breaks("2 hour"),limits = x_limits)+ scale_y_datetime(name = "",labels=date_format("%d-%m"))+theme(legend.position="none")
   
   
   
@@ -167,7 +167,22 @@ getActigraphTimelineRep <- function(user_activity_df,break_time_hr,break_time_mi
 }
 
 
+getMiscPlotly <- function(plot.df, misc_classes){
+  print(plot.df)
+  print(misc_classes)
+  plot.df <- plot.df[plot.df$label %in% misc_classes,]
+  print("-------------------")
+  print(coloursvec)
+  
+  g <- ggplot(plot.df , aes(x= x, y= y)) + theme_light() +
+    geom_point(aes(color = label),size=0.5) + 
+    #scale_colour_manual(values=  coloursvec) +
+    theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position='none', axis.ticks = element_blank(), axis.text = element_blank())
 
+  p <- ggplotly(g,height=100,width = 100) %>% config(displayModeBar = FALSE, scrollZoom = TRUE, doubleClick= 'reset') %>% layout(dragmode ="lasso")
+  return(p)
+
+  }
 
 
  

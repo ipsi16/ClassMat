@@ -51,7 +51,7 @@ fluidPage(
           uiOutput(class='timeline bg-faded','timeline')
         ),
         fluidRow(style='padding-top:10px',
-            column(6,id='overview',class='panel panel-default',div(class='panel-body',uiOutput('plots')) ), #style="background-color:#AA9C99;height:100%",plotlyOutput('splom')),
+            column(6,id='overview',class='panel panel-default',div(class='panel-body',uiOutput('plots')),div(id='viewControl',selectInput('viewOrderSlct','',''))),#,div(id='try',selectInput('tryInp','',c(1,2,3))) ), #style="background-color:#AA9C99;height:100%",plotlyOutput('splom')),
             column(3,id='focusedview',class='panel panel-default',
                           div(class='panel-heading','Main View'),
                           div(class='panel-body',plotlyOutput('selectedPlot',height=300),

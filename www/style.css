@@ -55,6 +55,7 @@
 {
   margin-right: 15px;
   padding:0px;
+  overflow:scroll;
 }
 #focusedview
 {
@@ -64,4 +65,25 @@
 {
   max-height:300;
   overflow:scroll;
+}
+.thumbnail:hover {
+    position:relative;
+    top:-25px;
+    left:-35px;
+    width:500px;
+    height:auto;
+    display:block;
+    z-index:999;
+}
+#viewControl
+{
+  position:absolute;
+  top:15px;
+  right:10px;
+  width:50px;
+  z-index:999;
+}
+.miscRow
+{
+  background-color:#c2d6d6;
 }

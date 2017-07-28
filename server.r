@@ -24,14 +24,17 @@ function(input, output, session) {
   version1 <- 1
   
   #reactive variables v: n.col = numer of classes, counter, selected
-  v <<- reactiveValues(version = 0, max_version=1,  selected = list(),focusedPlotCoords = c(1,1)) #, focusedPlotCoords = c(1,1)) ,n.col = nrow(unique(data.df["label"])),
+  v <<- reactiveValues(version = 0, max_version=1,  selected = list(),focusedPlotCoords = c(1,1),priorityClass=1) #, focusedPlotCoords = c(1,1)) ,n.col = nrow(unique(data.df["label"])),
+  dispSettings <- reactiveValues(ldaViewOrder=NULL,pcaViewOrder=NULL)
+  dispRowLimit <- 6
+  exceedsDispClsLt <- FALSE
   
   #reactive values for df: df, labels, sel
   df <- list(  sel= list(),labels=NULL,grp_names=NULL) #Df = data.df,labels = getdata(),
   
+  
   #for loading screen
   loading <- reactiveValues(flag = 0)
-  
   diag <- NULL
   p <- NULL
   uniq_labels <- NULL
@@ -56,7 +59,6 @@ function(input, output, session) {
     }
     
     df$Df <<- getdata(inputmap[[input$datasourceType]],userInputDataSourceFolderPath)
-    #assign group name
     
     
     if(input$datasourceType=="Sleep Data")
@@ -91,41 +93,94 @@ function(input, output, session) {
     }
   }
   
-  observeEvent(v$version,{
+  observe({
+    print("Here")
+    print(dispSettings$pcaOrder)
+    print(dispSettings$ldaOrder)
+    if(v$version>0)
+    {
+        for (i in 1:length(p)) {
+          local({
+            n <- i # Make local variable
+            plotname <- paste("plot", n , sep="")
+            output[[plotname]] <<- renderPlotly({
+              p[[n]]
+            })
+          })
+        }
+        
+        
+        for (i in 1:length(diag)) {
+          local({
+            n <- i # Make local variable
+            plotname <- paste("diag", n , sep="")
+            output[[plotname]] <<- renderPlotly({
+              diag[[dispSettings$pcaOrder[n]]]
+            })
+          })
+        }
+      
+      if(exceedsDispClsLt)
+      {
+        for(i in 1:dispRowLimit)
+        {
+          local({
+            n <- i # Make local variable
+            plotname <- paste("misc", n , sep="")
+            output[[plotname]] <<- renderPlotly({
+              misc[[n]]
+            })
+          })
+        }
+      }
+    }
     
+  })
+  
+  observeEvent(v$version,{
     print(paste("Version:",v$version))
     if(v$version==0)
+    {
       df$grp_names <- list()
+      hideElement("viewControl")
+      v$focusViewLock$state=FALSE
+    }
+      
     if(v$version>0){
       
-      p <<- getplotlylist( 1, df$Df , NULL , NULL)
-      diag <<- getdiaglylist(1, df$Df)
       uniq_labels <<- sort(unique(df$Df$label))
-      comblabels <<- list()
+      showElement("viewControl")
+      updateSelectInput(session,"viewOrderSlct",choices = uniq_labels)
       reinitializeGrpNames(df$Df)
       
+      if(length(uniq_labels)>dispRowLimit)
+        exceedsDispClsLt <<- TRUE
+      else
+        exceedsDispClsLt <<- FALSE
+      
+      comblabels <<- list()
       if(length(uniq_labels)>1)
         comblabels <<-combn(uniq_labels,2)
       
-      # Assign output names for created plots
-      for (i in 1:length(p)) {
-        local({
-          n <- i # Make local variable
-          plotname <- paste("plot", n , sep="")
-          output[[plotname]] <<- renderPlotly({
-            p[[n]]
-          })
-        })
-      }
+      n <- length(uniq_labels)
+      noLowerTriangle <- (n^2-n)/2
+      k <<- 1:noLowerTriangle
       
-      for (i in 1:length(diag)) {
-        local({
-          n <- i # Make local variable
-          plotname <- paste("diag", n , sep="")
-          output[[plotname]] <<- renderPlotly({
-            diag[[n]]
-          })
-        })
+      
+      v$priorityClass <<- 1
+      dispSettings$ldaOrder <<- k
+      dispSettings$pcaOrder <<- uniq_labels
+      print("PCA order")
+      print(dispSettings$pcaOrder)
+      print(dispSettings$ldaOrder)
+     
+      
+      p <<- getplotlylist( 1, df$Df,comblabels)
+      diag <<- getdiaglylist(1, df$Df)
+      if(exceedsDispClsLt)
+      {
+        misc <<- getmiscplotlylist(df$Df,dispSettings$pcaOrder,(length(uniq_labels)-dispRowLimit)+1)
+        print(paste("L of misc",length(misc)))
       }
       
       if(v$version>0 & v$version==v$max_version)
@@ -136,23 +191,17 @@ function(input, output, session) {
         output[[snapshotName]] <- renderImage({
           
           force(i)
-          outfile <<- sprintf("version%d.jpg",i)
-          
           
           #generate snapshot and store as file
-          if(i== v$version)
+          if(i==v$version)
           {
+            outfile <<- sprintf("version%d.jpg",i)
             p2 <<- getplotlist( 1, df$Df , NULL , NULL)
             uniq_labels <<- sort(unique(df$Df$label))
-            n <- length(uniq_labels)
-            noLowerTriangle <- (n^2-n)/2
-            k <-  1:noLowerTriangle
+            
             orderMatrix <- matrix(nrow = n, ncol = n)
             orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
             diag(orderMatrix) <- (noLowerTriangle+1):(noLowerTriangle+n)
-            #png(outfile)
-            #arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
-            #dev.off
             g <- arrangeGrob(grobs = p2,layout_matrix = orderMatrix)
             ggsave(sprintf("version%d.jpg",i),g)
           }
@@ -169,8 +218,6 @@ function(input, output, session) {
         #}
       }
     }
-    
-    #output$snapshot <- renderPlot({g1})
   })
   
   # merge function
@@ -197,32 +244,7 @@ function(input, output, session) {
                
                print("After manipulation")
                print(df$Df)
-               
-               #update using df$Df
-               p <<- getplotlylist( v$version, df$Df , NULL , NULL)
-               diag <<- getdiaglylist(v$version, df$Df)
-               #auc <- getauclist(df$Df)
-               
-               for (i in 1:length(p)) {
-                 local({
-                   n <- i # Make local variable
-                   plotname <- paste("plot", n , sep="")
-                   output[[plotname]] <<- renderPlotly({
-                     p[[n]]
-                    })
-                 })
-               }
-               
-               for (i in 1:length(diag)) {
-                 local({
-                   n <- i # Make local variable
-                   plotname <- paste("diag", n , sep="")
-                   output[[plotname]] <<- renderPlotly({
-                     diag[[n]]
-                   })
-                 })
-               }
-               
+              
                loading$flag <- 1
                
                uniq_labels <<- sort(unique(df$labels[,ncol(df$labels)]))
@@ -296,12 +318,6 @@ function(input, output, session) {
         print(sprintf("label%d",i))
         df$Df[,c("label")] <<- df$labels[sprintf("label%d",i)]
         v$version <<- i
-        #reset labels to one in the version 
-        #
-        #v$version <<- i 
-        #TODO: reset labels to selected version
-        #workout a way that any split/merge operation must produce ith version where ith version is max_count(label columns)+1 and not selected_version+1
-        
         })
     }
   }
@@ -343,6 +359,7 @@ function(input, output, session) {
     if(v$version>0)
     {
       n <- length(unique(df$Df[,c('label')]))   #number of classes/catgeories
+      noOfRows <- n
       loading$flag <- 0
       col.width <- round(12/n) # Calculate bootstrap column width
       cnter <- 0 # Counter variable ------ counter for what?
@@ -352,7 +369,16 @@ function(input, output, session) {
       noLowerTriangle <- (n^2-n)/2
       k <-  1:noLowerTriangle
       orderMatrix <<- matrix(nrow = n, ncol = n)
-      orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <- k
+      orderMatrix[lower.tri(orderMatrix, diag=FALSE)] <<- dispSettings$ldaOrder
+      print(paste("exceedsDispClsLt",exceedsDispClsLt))
+      
+      if(exceedsDispClsLt) 
+      {
+        noOfRows <- dispRowLimit-1
+        orderMatrix <<- orderMatrix[1:noOfRows,1:noOfRows]
+      }
+        
+      print(orderMatrix)
       order <- c(t(orderMatrix))
       order <- order[!is.na(order)]
       
@@ -361,7 +387,8 @@ function(input, output, session) {
       z <- length(order) # for roc-auc plot
       
       # Create fluidRows with columns
-      rows  <- lapply(1:n,function(row_num){
+      
+      rows  <- lapply(1:noOfRows,function(row_num){
         
         #LDA plots
         if(row_num==1)
@@ -372,7 +399,8 @@ function(input, output, session) {
         {
           lda_cols <- lapply(1:(row_num-1), function(col_num){
             
-            plotname <- paste("plot", order[g], sep="")
+            plotname <- paste("plot", order[g],sep="")
+            print(plotname)
             g <<- g+1
             column(col.width, plotlyOutput(plotname, height = "100%", width = "100%"))
           })
@@ -381,12 +409,6 @@ function(input, output, session) {
         #diagonal
         diagname <- paste("diag", row_num, sep="")
         diag <- column(col.width, plotlyOutput(diagname, height = "100%", width = "100%"))
-        
-        #AUC plot
-        #auc_cols <- lapply(1:(n-row_num), function(col_num) {
-          #plotname <- paste("auc", order[z], sep="")
-          #z <<- z-1
-          ##})
         
         # attach lda_cols, diag and cols2
         lda_cols[[length(lda_cols)+1]] <- diag
@@ -403,9 +425,22 @@ function(input, output, session) {
           function()
           {
             onevent("mouseenter",paste("plot",i,sep=""),{
-              v$focusedPlotCoords <- c(comblabels[1,i], comblabels[2,i])
+              if(!v$focusViewLock$state)
+                v$focusedPlotCoords <- c(comblabels[1,i], comblabels[2,i])
               hide("renameDiv")
             })
+            onclick(paste("plot",i,sep=""),{
+              print("onclick")
+              if(!is.null(v$focusViewLock$id) && v$focusViewLock$id==paste("plot",i,sep=""))
+              {
+                v$focusViewLock$state=!v$focusViewLock$state
+              }
+              else
+              {
+                v$focusViewLock$state=TRUE
+                v$focusViewLock$id=paste("plot",i,sep="")
+              }
+              })
           }
       }
       
@@ -423,9 +458,22 @@ function(input, output, session) {
         function()
         {
           onevent("mouseenter",paste("diag",j,sep=""),{
-            v$focusedPlotCoords <- c(j, j)
-            updateTextInput(session,"renameTxt",value=df$grp_names[[j]])
+            if(!v$focusViewLock$state)
+              v$focusedPlotCoords <- c(dispSettings$pcaOrder[j],dispSettings$pcaOrder[j])
+            updateTextInput(session,"renameTxt",value=df$grp_names[[dispSettings$pcaOrder[j]]])
             showElement("renameDiv")
+            })
+          onclick(paste("diag",i,sep=""),{
+            if(!is.null(v$focusViewLock$id) && v$focusViewLock$id==paste("diag",j,sep=""))
+            {
+              v$focusViewLock$state=!v$focusViewLock$state
+            }
+            else
+            {
+              v$focusViewLock$state=TRUE
+              v$focusViewLock$id=paste("diag",j,sep="")
+            }
+            
             })
         }
       }
@@ -441,15 +489,27 @@ function(input, output, session) {
         diagEventListeners[[j]]()
       }
       
-      #d<- div(style="height:200;width:200;position:absolute;right:0;top:0;background:red;z-index:2;","Hole in wall")#plotlyOutput("palette",height = 200,width=200))
-      
       # change screen from loading
       loading$flag <- 1
       
       # Calling the rows that contain cols
+      if(exceedsDispClsLt)
+      {
+        misc_cols <- lapply(1:dispRowLimit,function(ctr){
+          misc_plotname <- paste("misc",ctr, sep="")
+          column(col.width, plotlyOutput(misc_plotname, height = "100%", width = "100%"))
+        })
+        misc_row <- (fixedRow(class="miscRow",do.call(tagList, misc_cols)))
+        
+        #add listener
+        onevent("mouseenter",paste("misc",dispRowLimit,sep=""),{
+          v$focusedPlotCoords <- c(dispRowLimit,dispRowLimit)
+          hide("renameDiv")
+        })
+        rows[[dispRowLimit]] <- misc_row
+      }
       
       r <- do.call(tagList, rows)
-      #div(r,d)
       r
     }
   })
@@ -459,6 +519,8 @@ function(input, output, session) {
   
   output$selectedPlot <- renderPlotly(
     {
+      print("Locked state")
+      print(v$focusViewLock$state)
       if(v$version>0)
       {
           if(length(which(v$focusedPlotCoords %in% uniq_labels))<2)
@@ -466,23 +528,32 @@ function(input, output, session) {
             
           label1 = v$focusedPlotCoords[1]
           label2 =  v$focusedPlotCoords[2]
-          
-          if(label1 == label2)
+          if(exceedsDispClsLt && v$focusedPlotCoords[1]==dispRowLimit && v$focusedPlotCoords[2]==dispRowLimit)
           {
-            focusedPlot <- diag[[label1]]
-          }
-          else
-          {  
-              comb_labels <- combn(uniq_labels,2)
+            miscClasses <- dispSettings$pcaOrder[dispRowLimit:length(dispSettings$pcaOrder)]
+            dimReducedData <- attr(misc[[dispRowLimit]],'data')
+            dimReducedData$label <- df$Df$label
+            focusedPlot <- getMiscPlotly(dimReducedData,miscClasses) 
+            focusedPlot$x$source <- "miscFocusedPlot"
+          }  
+          else 
+          {
+            if(label1 == label2)
+            {
+              focusedPlot <- diag[[label1]]
+            }
+            else
+            {
               n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
               focusedPlot <- p[[n]]
+            }
+            focusedPlot$x$source <- "focusedPlot"
           }
           
         
           #t$layout$width <- 300
           #t$layout$height <- 300
           focusedPlot <- focusedPlot %>% layout(width=270,height=270,dragmode ="lasso")
-          focusedPlot$x$source <- "focusedPlot"
           focusedPlot
       }
       else{
@@ -493,7 +564,11 @@ function(input, output, session) {
     })
   
   output$selectedDataPoints <- renderUI({
+    
+    #temporary fix for data sources without representation
     d <- event_data("plotly_selected",source = "focusedPlot")
+    if(input$datasourceType!='Sleep Data')
+      d <- NULL
     if(!is.null(d)| length(d)!=0)
     {
       selected_classes <- v$focusedPlotCoords
@@ -507,10 +582,6 @@ function(input, output, session) {
         plotData <- getDataPoints(p,uniq_labels,selected_classes[1],selected_classes[2])
         focusedPoints <- (plotData$label %in% selected_classes)
       }
-        
-      
-      print("Plot Data")
-      print(plotData)
       
       df$sel <<- d[,c("x","y")]
       #print(df$sel[,c("x","y")])
@@ -532,7 +603,7 @@ function(input, output, session) {
                                height = 80,
                                alt = "This is alternate text")},deleteFile = FALSE)
         #p <- renderPlot(selected_actigraph_plot+theme(legend.position = "none"),height = 200)
-        fixedRow(column(12,p))
+        fixedRow(column(12,p),height=85)
       })
       tagList(rows)
     }
@@ -540,7 +611,42 @@ function(input, output, session) {
       fixedRow()
   })
   
+  observeEvent(input$viewOrderSlct,{
+    print((input$viewOrderSlct))
+    print("BEfore")
+    print(dispSettings$ldaOrder)
+    v$priorityClass <<- as.integer(input$viewOrderSlct)
+    
+    
+  })
   
+  observeEvent(v$priorityClass,{
+    print(paste("Pror class:",v$priorityClass))
+    print(dispSettings$ldaOrder)
+    if(!is.null(uniq_labels))
+    {
+      if(length(dispSettings$ldaOrder)==0 && length(uniq_labels)!=0)
+      {
+        n <- length(uniq_labels)
+        noLowerTriangle <- (n^2-n)/2
+        if(noLowerTriangle==0)
+          noLowerTriangle <- 1
+        k <<- 1:noLowerTriangle
+        
+        dispSettings$ldaOrder <<- k
+        dispSettings$pcaOrder <<- uniq_labels
+      }
+      else
+      {
+        dispSettings$ldaOrder <<- prioritizeClassDisplay(as.integer(input$viewOrderSlct),dispSettings$ldaOrder,comblabels)
+        dispSettings$pcaOrder <<- c(v$priorityClass,dispSettings$pcaOrder[dispSettings$pcaOrder!=v$priorityClass])
+        print(dispSettings$ldaOrder)
+        print(dispSettings$pcaOrder)
+      }
+    }
+    
+    
+  })
   
   # To display loading page
   observe({
@@ -557,7 +663,6 @@ function(input, output, session) {
   
   # get plot number (plot4) from hovered plot
   observeEvent(v$selected, {
-    print("v$selected")
     if(length(v$selected)!=0)
     {
       label1 = v$selected[1]
@@ -570,9 +675,7 @@ function(input, output, session) {
         
       else
       {
-        uniq_labels <- order(unique(df$Df[,ncol(df$Df)]))
-        comb_labels <- combn(uniq_labels,2)
-        n <- intersect(which(comb_labels[1,] == v$selected[1]) , which(comb_labels[2,] == v$selected[2]))
+        n <- intersect(which(comblabels[1,] == v$selected[1]) , which(comblabels[2,] == v$selected[2]))
         v$plotno <- p[[n]]
       }
     }
@@ -615,6 +718,8 @@ function(input, output, session) {
   output$hoveredDpView <- renderUI({
     
     eventdata <- event_data("plotly_hover", source = "focusedPlot")
+    if(input$datasourceType!='Sleep data')
+      eventdata <- NULL
     #validate(need(!is.null(eventdata), "Hover over the time series chart to populate this heatmap"))
     if(!is.null(eventdata))
     {
@@ -641,6 +746,23 @@ function(input, output, session) {
     
   })
   
+  observeEvent(event_data("plotly_click",source="miscFocusedPlot"),{
+    print(event_data("plotly_click",source="miscFocusedPlot"))
+    e <- event_data("plotly_click",source="miscFocusedPlot")
+    plotData <- attr(misc[[dispRowLimit]],'data')
+    
+    e[,c("x")] <- round(e[,c("x")],digits=7)
+    e[,c("y")] <- round(e[,c("y")],digits=7)
+    
+    plotData[,c("x")] <- round(plotData[,c("x")],digits=7)
+    plotData[,c("y")] <- round(plotData[,c("y")],digits=7)
+    print(plotData)
+    
+    presenceRoster <- data.frame(x=(plotData$x %in% e$x),y=(plotData$y %in% e$y))
+    selected_pt_idx <- which(presenceRoster$x & presenceRoster$y)
+    print(selected_pt_idx)
+    v$priorityClass <<- plotData[selected_pt_idx,c("label")]
+  })
 }
 
 
