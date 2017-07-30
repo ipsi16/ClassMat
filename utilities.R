@@ -9,7 +9,7 @@ getPlotCardinal <- function(uniq_label,class1, class2){
 }
 
 getDiagPlotDataPoints<- function(diag_plotly_list, class){
-  attr(diag_plotly_list[[class]],'data')
+  diag_plotly_list[[class]]$data[,c('x','y')]
 }
 
 getDataPoints <- function(plotly_list, uniq_label,class1,class2){

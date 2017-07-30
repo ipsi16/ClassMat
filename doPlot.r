@@ -2,11 +2,10 @@ library(dplyr)
 library(lazyeval)
 library(plotly)
 library(scales)
-
-
+source('global.R')
 # big plot for selection
 bigplot = function(data.df){
-  coloursvec <- brewer.pal(8, "Dark2")
+  #coloursvec <- brewer.pal(8, "Dark2")
   g <- ggplot(data.df, aes(x= x, y= y)) + theme_bw() +
     theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position='none', axis.ticks = element_blank(), axis.text = element_blank())
   p <- ggplotly(g, width = 80, height =80) %>% config(displayModeBar = FALSE, scrollZoom = TRUE, doubleClick= 'reset') %>% layout(dragmode = NULL)
@@ -168,21 +167,24 @@ getActigraphTimelineRep <- function(user_activity_df,break_time_hr,break_time_mi
 
 
 getMiscPlotly <- function(plot.df, misc_classes){
-  print(plot.df)
-  print(misc_classes)
+  
+  plot.df$label <- as.factor(plot.df$label)
   plot.df <- plot.df[plot.df$label %in% misc_classes,]
-  print("-------------------")
-  print(coloursvec)
   
   g <- ggplot(plot.df , aes(x= x, y= y)) + theme_light() +
     geom_point(aes(color = label),size=0.5) + 
-    #scale_colour_manual(values=  coloursvec) +
+    scale_colour_manual(values=  c("1"="#1b9e77","2"= "#ff7f00","3"= "#984ea3","4"= "#e7298a","5"= "#66a61e","6"="#e6ab02","7"="#e41a1c","8"="#fb9a99","9"="#1f78b4","10"="#a65628")) +
     theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position='none', axis.ticks = element_blank(), axis.text = element_blank())
 
   p <- ggplotly(g,height=100,width = 100) %>% config(displayModeBar = FALSE, scrollZoom = TRUE, doubleClick= 'reset') %>% layout(dragmode ="lasso")
   return(p)
 
-  }
+}
+
+getPlotlyFromPlot <- function(ggplot_obj,plot_height=100,plot_width=100){
+  p <- ggplotly(ggplot_obj,height= plot_height,width= plot_width)%>% config(displayModeBar = FALSE, scrollZoom = TRUE, doubleClick= 'reset') %>% layout(dragmode ="lasso")
+  return(p)
+}
 
 
  

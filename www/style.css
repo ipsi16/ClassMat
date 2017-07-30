@@ -28,7 +28,7 @@
 {
   height:200;
   width:200;
-  border:2px yellow;
+  border:10px yellow;
 }
 #display-panel
 {
@@ -85,5 +85,8 @@
 }
 .miscRow
 {
+  height:100px;
   background-color:#c2d6d6;
+  border-top-color:#c2d6d6;
+  
 }
