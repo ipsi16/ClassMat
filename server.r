@@ -166,12 +166,16 @@ function(input, output, session) {
         comblabels <<-combn(uniq_labels,2)
       n <- length(uniq_labels)
       noLowerTriangle <- (n^2-n)/2
-      k <<- 1:noLowerTriangle
+      if(noLowerTriangle==0)
+        k <- NULL
+      else
+        k <<- 1:noLowerTriangle
       
       dispSettings$ldaOrder <<- k
       dispSettings$pcaOrder <<- uniq_labels
       print("PCA order")
       print(dispSettings$pcaOrder)
+      print("LDA order")
       print(dispSettings$ldaOrder)
      
       print("Fetching Plot Lists....")
@@ -623,9 +627,9 @@ function(input, output, session) {
       print(paste("Priority class:",v$priorityClass))
       print("Before :")
       print(dispSettings$ldaOrder)
-      if(!is.null(uniq_labels))
+      if(!is.null(uniq_labels) && length(uniq_labels)!=0)
       {
-        if(length(dispSettings$ldaOrder)==0 && length(uniq_labels)!=0)
+        if(is.null(dispSettings$ldaOrder))
         {
           n <- length(uniq_labels)
           noLowerTriangle <- (n^2-n)/2
