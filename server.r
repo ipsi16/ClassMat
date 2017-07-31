@@ -640,14 +640,15 @@ function(input, output, session) {
       print(selected_actigraph_plots_idx)
       rows <- lapply(1:length(selected_actigraph_plots_idx), function(i){
         imgFilePath <- sprintf('dp-%d.jpg',selected_actigraph_plots_idx[[i]]) 
+        im <- imageOutput(sprintf('dp-%d',selected_actigraph_plots_idx[[i]]), height="80px" )
         im <- renderImage({
                               list(src = imgFilePath,
                                contentType = 'image/jpg',
-                               width = 150,
+                               width = 190,
                                height = 80,
                                alt = "This is alternate text")},deleteFile = FALSE)
         #p <- renderPlot(selected_actigraph_plot+theme(legend.position = "none"),height = 200)
-        fixedRow(column(12,im),height=85)
+        fixedRow(column(12,im,style="padding:0px;height:80px"),height=85)
       })
       tagList(rows)
     }
