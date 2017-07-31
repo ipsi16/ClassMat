@@ -23,8 +23,21 @@ getLDAdata <- function(data.df,l1,l2){
       dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
       dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
       dataLDA<-ldaClassSPLOM(dataStdz,labels,l1,l2)
-      
     }
+    dataLDA
+}
+
+getPCAdata <- function(data.df){
+  dataPCA <- data.df
+  if(data.df[,!(names(data.df)  %in% c('id','label'))]>2)
+  {
+    labels <- data.df[,c('label')]
+    dataStdzdf<-standardizeData(data.df[,!(names(data.df)  %in% c('label','id'))])
+    dataStdz<-as.matrix(dataStdzdf[,1:length(dataStdzdf)])
+    dataPCA <- pcaClassSPLOM(dataStdz)
+    dataPCA$label <- labels
+  }
+  dataPCA
 }
 
 getLDAPlotlist <- function(counter, data.df, brushedlines, clickedline)

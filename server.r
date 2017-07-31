@@ -38,6 +38,7 @@ function(input, output, session) {
   diag_plt_list <- NULL
   p <- NULL
   uniq_labels <- NULL
+  focusedPlot <- NULL
   inputFolderPath <- 'input'
   datatypeInputFolderName <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
   inputmap <- c('Generated'="default",'Sleep Data'="sleepData",'MNIST'="mnist")
@@ -57,7 +58,7 @@ function(input, output, session) {
         file.copy(inFiles$datapath[i],file.path(userInputDataSourceFolderPath,inFiles$name[i]),overwrite = TRUE)
       }
     }
-    
+    reset("datasourceFiles")
     df$Df <<- getdata(inputmap[[input$datasourceType]],userInputDataSourceFolderPath)
     
     
@@ -96,6 +97,7 @@ function(input, output, session) {
     print(dispSettings$pcaOrder)
     print(dispSettings$ldaOrder)
     print(sprintf("Rendering version %d",v$version))
+    print(df$labels)
     if(v$version>0)
     {
         
@@ -259,43 +261,65 @@ function(input, output, session) {
   )
   
   #split function
-  observeEvent(input$split,{ 
+  observeEvent(input$split,{
+                    print("Splitting selected data points...")
                    if(!is.null(event_data("plotly_selected",source = "focusedPlot")))
                    {
                      # display selected rows
                      d <- event_data("plotly_selected",source = "focusedPlot")
-                     selected_classes <- v$focusedPlotCoords
-                     
-                     if(v$focusedPlotCoords[1]==v$focusedPlotCoords[2])
+                     #plotData <- focusedPlot$data
+                       
+                     pos1 = v$focusedPlotCoords[1]
+                     pos2 = v$focusedPlotCoords[2]
+                     if(pos1==pos2)
                      {
-                       plotData <- getDiagPlotDataPoints(diag_plt_list,v$focusedPlotCoords[1])
-                       focusedPoints <- (plotData$label==v$focusedPlotCoords[1])
+                         label_in_focus = dispSettings$pcaOrder[pos1]
+                         plotData <- getPCAdata(df$Df)
+                         focusedPoints <- (plotData$label==label_in_focus)
+                         
                      } 
                      else
-                       plotData <- getDataPoints(p,uniq_labels,v$focusedPlotCoords[1],v$focusedPlotCoords[2])
-                        focusedPoints <- (plotData$label %in% v$focusedPlotCoords)
-
-                    
+                     {
+                         label1 = dispSettings$pcaOrder[pos1]
+                         label2 = dispSettings$pcaOrder[pos2]
+                         plotData <- getLDAdata(df$Df,label1,label2)
+                         focusedPoints <- (plotData$label %in% c(label1,label2))
+                     }
+                     
                      df$sel <<- d[,c("x","y")]
                      df$sel[,c("x")] <- round(df$sel[,c("x")],digits=6)
                      df$sel[,c("y")] <- round(df$sel[,c("y")],digits=6)
                      
                      plotData[,c("x")] <- round(plotData[,c("x")],digits=6)
                      plotData[,c("y")] <- round(plotData[,c("y")],digits=6)
+                     
+                     print("Plot data")
+                     print(plotData)
+                     
+                     print("Selected Data Points")
+                     print(df$sel)
+                     
 
                      #presenceRoster <- data.frame(x=(df$Df$x %in% df$sel$x),y=(df$Df$y %in% df$sel$y))
                      presenceRoster <- data.frame(x=(plotData$x %in% df$sel$x),y=(plotData$y %in% df$sel$y))
-                     to <- df$Df[(presenceRoster$x & presenceRoster$y & focusedPoints),]
+                     lbls <- df$Df$label
+                     
+                     
+                     print("Split indexes:")
+                     print(which(presenceRoster$x & presenceRoster$y & focusedPoints))
   
-                     df$Df[(presenceRoster$x & presenceRoster$y),]$label <<- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
                      if(v$max_version==1)
                      {
                        df$labels <<- data.frame(label1=df$Df[,c('label')])
                      }
+                     lbls[(presenceRoster$x & presenceRoster$y & focusedPoints)] <- max(df$Df$label)+1
+                     df$Df$label <<- lbls
+                     #df$Df[(presenceRoster$x & presenceRoster$y & focusedPoints),]$label <<- max(df$Df$label)+1   #levels(df$Df$label)[length(levels(df$Df$label))]
+                     
                        
                      old_col <- paste("label", v$max_version, sep="")
                      new_col <- paste("label", v$max_version + 1  , sep="")
-                     df$labels[new_col] <<- df$Df$label 
+                     df$labels[new_col] <<- lbls 
                      v$max_version <<- v$max_version + 1
                      v$version <<- v$max_version
                      
@@ -315,11 +339,13 @@ function(input, output, session) {
   {
     function()
     {
-        onclick(sprintf("snapshot%d",i),function(e){ 
-        
-        print(sprintf("label%d",i))
-        df$Df[,c("label")] <<- df$labels[sprintf("label%d",i)]
-        v$version <<- i
+        onclick(sprintf("snapshot%d",i),function(e){
+          
+          #change version
+          df$Df[,c("label")] <<- df$labels[sprintf("label%d",i)]
+          v$version <<- i
+          
+          #send custom message for highlight
         })
     }
   }
@@ -518,9 +544,6 @@ function(input, output, session) {
       r
     }
   })
- 
-  
-  
   
   output$selectedPlot <- renderPlotly(
     {
@@ -539,30 +562,32 @@ function(input, output, session) {
             dimReducedData <- misc[[dispRowLimit]]$data[,c('x','y')]
             #assign each point to their original classes (not aggregated classes)
             dimReducedData$label <- df$Df$label
-            focusedPlot <- getMiscPlotly(dimReducedData,miscClasses) 
-            focusedPlot$x$source <- "miscFocusedPlot"
+            focusedPlotly <<- getMiscPlotly(dimReducedData,miscClasses) 
+            focusedPlotly$x$source <<- "miscFocusedPlot"
           }  
           else 
           {
             if(pos1 == pos2)
             {
               label = dispSettings$pcaOrder[pos1]
-              focusedPlot <- getPlotlyFromPlot(diag_plt_list[[which(uniq_labels==label)]])
+              focusedPlot <<- diag_plt_list[[which(uniq_labels==label)]]
+              focusedPlotly <<- getPlotlyFromPlot(diag_plt_list[[which(uniq_labels==label)]])
             }
             else
             {
               label1 = pos1
               label2 = pos2
               n <- intersect(which(comblabels[1,] == label1) , which(comblabels[2,] == label2))
-              focusedPlot <- getPlotlyFromPlot(p[[n]])
+              focusedPlot <<- p[[n]]
+              focusedPlotly <<- getPlotlyFromPlot(p[[n]])
             }
-            focusedPlot$x$source <- "focusedPlot"
+            focusedPlotly$x$source <<- "focusedPlot"
           }
           
           #t$layout$width <- 300
           #t$layout$height <- 300
-          focusedPlot <- focusedPlot %>% layout(width=270,height=270,dragmode ="lasso")
-          focusedPlot
+          focusedPlotly <<- focusedPlotly %>% layout(width=270,height=270,dragmode ="lasso")
+          focusedPlotly
       }
       else{
         plotly_empty()
@@ -574,31 +599,45 @@ function(input, output, session) {
     
     #temporary fix for data sources without representation
     d <- event_data("plotly_selected",source = "focusedPlot")
+    
     if(input$datasourceType!='Sleep Data')
       d <- NULL
     if(!is.null(d)| length(d)!=0)
     {
-      selected_classes <- v$focusedPlotCoords
       
-      if(selected_classes[1]==selected_classes[2])
+      pos1 = v$focusedPlotCoords[1]
+      pos2 = v$focusedPlotCoords[2]
+      if(pos1==pos2)
       {
-        plotData <- getDiagPlotDataPoints(diag_plt_list,selected_classes[1])
-        focusedPoints <- (plotData$label==selected_classes[1])
-      }
-      else{
-        plotData <- getDataPoints(p,uniq_labels,selected_classes[1],selected_classes[2])
-        focusedPoints <- (plotData$label %in% selected_classes)
+        label_in_focus = dispSettings$pcaOrder[pos1]
+        plotData <- getPCAdata(df$Df)
+        focusedPoints <- (plotData$label==label_in_focus)
+        
+      } 
+      else
+      {
+        label1 = dispSettings$pcaOrder[pos1]
+        label2 = dispSettings$pcaOrder[pos2]
+        plotData <- getLDAdata(df$Df,label1,label2)
+        focusedPoints <- (plotData$label %in% c(label1,label2))
       }
       
       df$sel <<- d[,c("x","y")]
       df$sel[,c("x")] <- round(df$sel[,c("x")],digits=6)
       df$sel[,c("y")] <- round(df$sel[,c("y")],digits=6)
       
-      plotData[,c("x")] <- round(plotData[,c("x")],digits=6)
-      plotData[,c("y")] <- round(plotData[,c("y")],digits=6)
+      plotData$x <- round(plotData$x,digits=6)
+      plotData$y <- round(plotData$y,digits=6)
+      
+      print("Selected Data Points")
+      print(df$sel)
+      print("Plot data")
+      print(plotData)
       
       presenceRoster <- data.frame(x=(plotData$x %in% df$sel$x),y=(plotData$y %in% df$sel$y))
-      selected_actigraph_plots_idx <- which(presenceRoster$x & presenceRoster$y)#df$actigraphRep[which(presenceRoster$x & presenceRoster$y)]
+      selected_actigraph_plots_idx <- which(presenceRoster$x & presenceRoster$y & focusedPoints)#df$actigraphRep[which(presenceRoster$x & presenceRoster$y)]
+      print("data point indexes")
+      print(selected_actigraph_plots_idx)
       rows <- lapply(1:length(selected_actigraph_plots_idx), function(i){
         imgFilePath <- sprintf('dp-%d.jpg',selected_actigraph_plots_idx[[i]]) 
         im <- renderImage({

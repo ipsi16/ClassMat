@@ -8,11 +8,20 @@ getPlotCardinal <- function(uniq_label,class1, class2){
   
 }
 
-getDiagPlotDataPoints<- function(diag_plotly_list, class){
-  diag_plotly_list[[class]]$data[,c('x','y')]
+getDiagPlotDataPoints<- function(diag_plot_list, plt_indx){
+  diag_plot_list[[plt_indx]]$data[,c('x','y')]
+}
+
+getDiagPlotlyDataPoints<- function(diag_plotly_list, plt_indx){
+  attr(diag_plotly_list[[plt_indx]],'data')
 }
 
 getDataPoints <- function(plotly_list, uniq_label,class1,class2){
+  n <- getPlotCardinal(uniq_label,class1,class2)
+  attr(plotly_list[[n]],'data')
+}
+
+getPlotlyDataPoints <- function(plotly_list, uniq_label,class1,class2){
   n <- getPlotCardinal(uniq_label,class1,class2)
   attr(plotly_list[[n]],'data')
 }
